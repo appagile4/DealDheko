@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Shield,
-  KeyRound,
   Eye,
   EyeOff,
   ExternalLink,
@@ -23,8 +22,8 @@ import {
 export default function AdminLoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("admin@dealdheko.com");
-  const [password, setPassword] = useState("Admin@DealDheko2026!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,10 +65,7 @@ export default function AdminLoginPage() {
     }
   };
 
-  const handleFillCredentials = () => {
-    setEmail("admin@dealdheko.com");
-    setPassword("Admin@DealDheko2026!");
-  };
+
 
   return (
     <div className="min-h-screen w-full flex flex-col justify-between bg-gradient-to-b from-[#F0F6FF] via-[#F8FAFC] to-[#FFF4EB]/40 text-slate-900 relative select-none">
@@ -207,25 +203,7 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            {/* Autofill / Pre-filled Box */}
-            <div className="p-3 bg-gradient-to-r from-blue-50/80 to-orange-50/60 border border-slate-200 rounded-xl text-[11px] text-slate-600 space-y-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[#0047BA] font-bold">
-                  <KeyRound className="w-3.5 h-3.5 text-[#FF6A00]" />
-                  <span>Default Root Account:</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleFillCredentials}
-                  className="text-[10px] text-[#0047BA] hover:text-[#FF6A00] font-bold underline cursor-pointer"
-                >
-                  Autofill
-                </button>
-              </div>
-              <div className="font-mono text-[10px] text-slate-800">
-                admin@dealdheko.com / Admin@DealDheko2026!
-              </div>
-            </div>
+
 
             {/* Submit Button */}
             <button
