@@ -32,10 +32,12 @@ import {
   History,
   ShieldCheck,
   ShoppingBag,
+  Image as ImageIcon,
 } from "lucide-react";
 import { ProductHistoryModal } from "@/components/admin/ProductHistoryModal";
 import { DealsTable } from "@/components/admin/DealsTable";
 import { ChatTranscriptModal } from "@/components/admin/ChatTranscriptModal";
+import { BannerManagement } from "@/components/admin/BannerManagement";
 
 interface AdminStats {
   totalAds: number;
@@ -106,7 +108,7 @@ export default function SuperadminDashboardPage() {
 
   // Navigation & UI States
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "pending" | "approved" | "rejected" | "all" | "deals" | "users" | "audit"
+    "dashboard" | "pending" | "approved" | "rejected" | "all" | "deals" | "users" | "audit" | "banners"
   >("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -421,6 +423,11 @@ export default function SuperadminDashboardPage() {
                 icon: ShoppingBag,
               },
               {
+                id: "banners",
+                label: "Hero Banners",
+                icon: ImageIcon,
+              },
+              {
                 id: "users",
                 label: "User Management",
                 icon: Users,
@@ -570,6 +577,8 @@ export default function SuperadminDashboardPage() {
                     ? "Rejected Advertisements"
                     : activeTab === "deals"
                     ? "Marketplace Transactions, Deals & Buyer Inquiries"
+                    : activeTab === "banners"
+                    ? "Homepage Hero Banners (2-Second Carousel)"
                     : activeTab === "users"
                     ? "Registered Users Directory"
                     : activeTab === "audit"
@@ -582,6 +591,8 @@ export default function SuperadminDashboardPage() {
                   ? "Carefully review product photos and description before approving for public display."
                   : activeTab === "deals"
                   ? "Full buyer-seller transparency: see who is buying what from whose seller, final sale prices, and all negotiation logs."
+                  : activeTab === "banners"
+                  ? "Upload unlimited promotional banners. Active banners smoothly loop every 2 seconds on the marketplace."
                   : "Live data directly synchronized with MongoDB Atlas cluster."}
               </p>
             </div>
@@ -758,6 +769,9 @@ export default function SuperadminDashboardPage() {
                 </table>
               </div>
             </div>
+          ) : activeTab === "banners" ? (
+            /* Homepage Hero Banners Carousel Manager */
+            <BannerManagement />
           ) : activeTab === "deals" ? (
             /* Marketplace Deals & Buyer Inquiries Table */
             <DealsTable
