@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Product, ProductFilterState } from "@/types/product";
 import { ProductGrid } from "@/components/products/ProductGrid";
@@ -9,6 +9,7 @@ import { SortDropdown, SortOption } from "@/components/filters/SortDropdown";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { filterAndSortProducts } from "@/lib/mock-api";
+import { searchAds } from "@/lib/advertisementApi";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
 interface SearchResultsViewProps {
@@ -31,15 +32,51 @@ export function SearchResultsView({
     sortBy: "relevance",
   });
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [liveSearchResults, setLiveSearchResults] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function performLiveSearch() {
+      try {
+        const res = await searchAds(query, filters.city, filters.category);
+        if (mounted && res.products.length > 0) {
+          setLiveSearchResults(res.products);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    performLiveSearch();
+    return () => {
+      mounted = false;
+    };
+  }, [query, filters.city, filters.category]);
 
   // Dynamically filter mock products by search query and filters
   const searchResults = useMemo(() => {
-    let list = [...initialProducts];
+    // Merge live MongoDB search results with fallback initial products
+    const ids = new Set<string>();
+    const list: Product[] = [];
+
+    for (const p of liveSearchResults) {
+      if (!ids.has(p.id)) {
+        ids.add(p.id);
+        list.push(p);
+      }
+    }
+
+    for (const p of initialProducts) {
+      if (!ids.has(p.id)) {
+        ids.add(p.id);
+        list.push(p);
+      }
+    }
 
     // Query text match
     const q = query.trim().toLowerCase();
+    let filteredList = list;
     if (q) {
-      list = list.filter((p) => {
+      filteredList = filteredList.filter((p) => {
         const titleMatch = p.title.toLowerCase().includes(q);
         const descMatch = p.description.toLowerCase().includes(q);
         const catMatch = p.category.toLowerCase().includes(q);
@@ -50,11 +87,11 @@ export function SearchResultsView({
     }
 
     if (initialFeatured) {
-      list = list.filter((p) => p.featured);
+      filteredList = filteredList.filter((p) => p.featured);
     }
 
-    return filterAndSortProducts(list, filters);
-  }, [initialProducts, query, filters, initialFeatured]);
+    return filterAndSortProducts(filteredList, filters);
+  }, [liveSearchResults, initialProducts, query, filters, initialFeatured]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

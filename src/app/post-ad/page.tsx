@@ -11,7 +11,8 @@ import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { Category } from "@/types/category";
 import { Product } from "@/types/product";
 import { useMarketplace } from "@/context/MarketplaceContext";
-import { Check, ArrowRight, ArrowLeft } from "lucide-react";
+import { createAd } from "@/lib/advertisementApi";
+import { Check, ArrowRight, ArrowLeft, AlertCircle } from "lucide-react";
 
 const STEPS = [
   { id: 1, title: "Category" },
@@ -22,10 +23,13 @@ const STEPS = [
 ];
 
 export default function PostAdPage() {
-  const { addCustomAd, user } = useMarketplace();
+  const { addCustomAd, user, openAuthModal } = useMarketplace();
   const [currentStep, setCurrentStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedSlug, setPublishedSlug] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submissionNotice, setSubmissionNotice] = useState<string>("");
 
   // Form State
   const [category, setCategory] = useState<string>("cars");
@@ -39,14 +43,14 @@ export default function PostAdPage() {
   });
   const [images, setImages] = useState<string[]>([]);
   const [locationData, setLocationData] = useState({
-    state: "Delhi",
-    city: "Delhi",
+    state: "Bagmati",
+    city: "Kathmandu",
     area: "",
     pincode: "",
   });
   const [sellerData, setSellerData] = useState({
     name: user?.name || "Verified Seller",
-    phone: user?.phone || "+91 98765 43210",
+    phone: user?.phone || "+977 9800000000",
     email: user?.email || "seller@example.com",
   });
 
@@ -102,52 +106,105 @@ export default function PostAdPage() {
     setCurrentStep(2);
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
+    // If not logged in, prompt user to log in
+    if (!user) {
+      setSubmitError("Please log in to submit your advertisement for Superadmin approval.");
+      openAuthModal();
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
     const slug = `${formData.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-4)}`;
 
-    const newAd: Product = {
-      id: `custom-ad-${Date.now()}`,
-      title: formData.title,
-      slug: slug,
-      description: formData.description,
-      price: Number(formData.price),
-      category: category,
-      condition: formData.condition,
-      images: images.length > 0 ? images : [
-        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80",
-      ],
-      location: {
-        city: locationData.city,
-        state: locationData.state,
-        area: locationData.area,
-        pincode: locationData.pincode,
-      },
-      seller: {
-        id: user?.id || "user-101",
-        name: sellerData.name,
-        avatar: user?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
-        memberSince: "Nov 2026",
-        verified: true,
-        phone: sellerData.phone,
+    const fallbackImages =
+      images.length > 0
+        ? images
+        : ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80"];
+
+    try {
+      // Send real creation request to backend
+      const res = await createAd({
+        title: formData.title,
+        description: formData.description,
+        price: Number(formData.price),
+        category: category,
+        condition: formData.condition,
+        images: fallbackImages,
+        location: locationData,
+        sellerContact: {
+          name: sellerData.name,
+          phone: sellerData.phone,
+          email: sellerData.email,
+        },
+        attributes: {
+          ...(formData.brand ? { Brand: formData.brand } : {}),
+          ...(formData.year ? { Year: formData.year } : {}),
+          Condition: formData.condition,
+        },
+      });
+
+      const savedSlug = res.advertisement?.slug || slug;
+      setPublishedSlug(savedSlug);
+      setSubmissionNotice(
+        res.message ||
+          "Your advertisement has been submitted successfully and is awaiting admin approval."
+      );
+
+      // Also persist to local custom ad state for immediate reactivity
+      const localAd: Product = {
+        id: res.advertisement?._id || `ad-${Date.now()}`,
+        title: formData.title,
+        slug: savedSlug,
+        description: formData.description,
+        price: Number(formData.price),
+        category: category,
+        condition: formData.condition,
+        images: fallbackImages,
         location: {
           city: locationData.city,
           state: locationData.state,
           area: locationData.area,
+          pincode: locationData.pincode,
         },
-        totalAds: 1,
-      },
-      postedAt: new Date().toISOString(),
-      featured: true,
-      attributes: {
-        ...(formData.brand ? { Brand: formData.brand } : {}),
-        ...(formData.year ? { Year: formData.year } : {}),
-        Condition: formData.condition,
-      },
-    };
+        seller: {
+          id: user?.id || "user-101",
+          name: sellerData.name,
+          avatar:
+            user?.avatar ||
+            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+          memberSince: "Nov 2026",
+          verified: true,
+          phone: sellerData.phone,
+          location: {
+            city: locationData.city,
+            state: locationData.state,
+            area: locationData.area,
+          },
+          totalAds: 1,
+        },
+        postedAt: new Date().toISOString(),
+        featured: false,
+        attributes: {
+          ...(formData.brand ? { Brand: formData.brand } : {}),
+          ...(formData.year ? { Year: formData.year } : {}),
+          Condition: formData.condition,
+        },
+      };
 
-    addCustomAd(newAd);
-    setPublishedSlug(slug);
-    setIsPublished(true);
+      addCustomAd(localAd);
+      setIsPublished(true);
+    } catch (err: any) {
+      console.error("Ad creation error:", err);
+      setSubmitError(
+        err.response?.data?.message ||
+          "Failed to submit advertisement to the server. Please check your connection and try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const breadcrumbItems = [
@@ -158,6 +215,13 @@ export default function PostAdPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Breadcrumb items={breadcrumbItems} />
+
+      {submitError && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl flex items-center gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          <span>{submitError}</span>
+        </div>
+      )}
 
       {/* Progress Steps Header */}
       {!isPublished && (
@@ -263,6 +327,8 @@ export default function PostAdPage() {
             onBack={handleBack}
             isPublished={isPublished}
             publishedSlug={publishedSlug}
+            isSubmitting={isSubmitting}
+            submissionNotice={submissionNotice}
           />
         )}
 

@@ -5,6 +5,7 @@ export interface Seller {
   memberSince: string;
   verified: boolean;
   phone?: string;
+  email?: string;
   location: {
     city: string;
     state: string;

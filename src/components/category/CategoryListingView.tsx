@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Category } from "@/types/category";
 import { Product, ProductFilterState } from "@/types/product";
 import { ProductGrid } from "@/components/products/ProductGrid";
@@ -9,6 +9,7 @@ import { SortDropdown, SortOption } from "@/components/filters/SortDropdown";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { EmptyState } from "@/components/common/EmptyState";
 import { filterAndSortProducts } from "@/lib/mock-api";
+import { getApprovedAds } from "@/lib/advertisementApi";
 import { SlidersHorizontal, Search, X } from "lucide-react";
 
 interface CategoryListingViewProps {
@@ -29,10 +30,48 @@ export function CategoryListingView({
   });
   const [searchKeyword, setSearchKeyword] = useState("");
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [liveAds, setLiveAds] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadCategoryApprovedAds() {
+      try {
+        const res = await getApprovedAds({ category: category.slug, limit: 30 });
+        if (mounted && res.products.length > 0) {
+          setLiveAds(res.products);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadCategoryApprovedAds();
+    return () => {
+      mounted = false;
+    };
+  }, [category.slug]);
+
+  // Combine live approved ads with initial products (deduped)
+  const combinedProducts = useMemo(() => {
+    const ids = new Set<string>();
+    const list: Product[] = [];
+    for (const p of liveAds) {
+      if (!ids.has(p.id)) {
+        ids.add(p.id);
+        list.push(p);
+      }
+    }
+    for (const p of initialProducts) {
+      if (!ids.has(p.id)) {
+        ids.add(p.id);
+        list.push(p);
+      }
+    }
+    return list;
+  }, [liveAds, initialProducts]);
 
   // Filter products dynamically
   const filteredProducts = useMemo(() => {
-    let result = filterAndSortProducts(initialProducts, filters);
+    let result = filterAndSortProducts(combinedProducts, filters);
     if (searchKeyword.trim()) {
       const q = searchKeyword.toLowerCase();
       result = result.filter(
@@ -43,7 +82,7 @@ export function CategoryListingView({
       );
     }
     return result;
-  }, [initialProducts, filters, searchKeyword]);
+  }, [combinedProducts, filters, searchKeyword]);
 
   const handleResetFilters = () => {
     setFilters({

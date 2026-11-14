@@ -1,13 +1,10 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts, getAllProducts } from "@/lib/mock-api";
+import { getAdBySlug } from "@/lib/advertisementApi";
 import { ProductDetailView } from "@/components/products/ProductDetailView";
+import { Product } from "@/types/product";
 
-export function generateStaticParams() {
-  const products = getAllProducts();
-  return products.map((prod) => ({
-    slug: prod.slug,
-  }));
-}
+export const dynamic = "force-dynamic";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -15,7 +12,21 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+
+  let product: Product | null = null;
+
+  try {
+    const { product: backendProduct } = await getAdBySlug(slug);
+    if (backendProduct) {
+      product = backendProduct;
+    }
+  } catch {
+    // ignore
+  }
+
+  if (!product) {
+    product = getProductBySlug(slug) || null;
+  }
 
   if (!product) {
     notFound();

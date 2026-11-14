@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
-import { UploadCloud, X, Star, Plus } from "lucide-react";
+import { UploadCloud, X, Star, Plus, Loader2 } from "lucide-react";
+import { uploadAdImages } from "@/lib/advertisementApi";
 
 interface ImageUploaderProps {
   images: string[];
@@ -20,6 +21,9 @@ const PRESET_MOCK_PHOTOS = [
 ];
 
 export function ImageUploader({ images, onChange, error }: ImageUploaderProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+
   const handleRemove = (index: number) => {
     onChange(images.filter((_, i) => i !== index));
   };
@@ -37,17 +41,35 @@ export function ImageUploader({ images, onChange, error }: ImageUploaderProps) {
     onChange([...images, url]);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Convert local file to Object URL for instant preview
-    const newUrls: string[] = [];
-    for (let i = 0; i < files.length && images.length + newUrls.length < 8; i++) {
-      const url = URL.createObjectURL(files[i]);
-      newUrls.push(url);
+    const fileList = Array.from(files).slice(0, 8 - images.length);
+    if (fileList.length === 0) return;
+
+    setIsUploading(true);
+    setUploadNotice("Uploading photos to Cloudinary...");
+
+    try {
+      const uploaded = await uploadAdImages(fileList);
+      if (uploaded && uploaded.length > 0) {
+        const newUrls = uploaded.map((u) => u.url);
+        onChange([...images, ...newUrls]);
+        setUploadNotice("Photos uploaded successfully!");
+      } else {
+        const fallbackUrls = fileList.map((f) => URL.createObjectURL(f));
+        onChange([...images, ...fallbackUrls]);
+      }
+    } catch {
+      // Graceful fallback to local object preview
+      const fallbackUrls = fileList.map((f) => URL.createObjectURL(f));
+      onChange([...images, ...fallbackUrls]);
+      setUploadNotice(null);
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setUploadNotice(null), 3000);
     }
-    onChange([...images, ...newUrls]);
   };
 
   return (
@@ -65,24 +87,37 @@ export function ImageUploader({ images, onChange, error }: ImageUploaderProps) {
       </div>
 
       {/* Upload Dropzone */}
-      <label className="border-2 border-dashed border-slate-300 hover:border-[#00A896] bg-slate-50 hover:bg-[#00A896]/5 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors block text-center">
+      <label className={`border-2 border-dashed ${
+        isUploading
+          ? "border-amber-400 bg-amber-50/40 cursor-wait"
+          : "border-slate-300 hover:border-[#00A896] bg-slate-50 hover:bg-[#00A896]/5 cursor-pointer"
+      } rounded-2xl p-6 flex flex-col items-center justify-center transition-colors block text-center`}>
         <input
           type="file"
           multiple
           accept="image/*"
           onChange={handleFileUpload}
+          disabled={isUploading || images.length >= 8}
           className="hidden"
         />
         <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-[#00A896] mb-2">
-          <UploadCloud className="w-6 h-6" />
+          {isUploading ? (
+            <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+          ) : (
+            <UploadCloud className="w-6 h-6" />
+          )}
         </div>
         <span className="text-sm font-bold text-slate-800">
-          Click to upload photos from your device
+          {isUploading ? "Uploading photos to Cloudinary..." : "Click to upload photos from your device"}
         </span>
         <span className="text-xs text-slate-400 mt-1">
-          Supports JPG, PNG, WEBP (Max 8 photos)
+          Supports JPG, PNG, WEBP (Max 8 photos, up to 10MB each)
         </span>
       </label>
+
+      {uploadNotice && (
+        <p className="text-xs text-emerald-600 font-semibold">{uploadNotice}</p>
+      )}
 
       {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
 
@@ -97,69 +132,90 @@ export function ImageUploader({ images, onChange, error }: ImageUploaderProps) {
               key={i}
               type="button"
               onClick={() => handleAddPreset(url)}
-              disabled={images.includes(url) || images.length >= 8}
-              className="relative w-14 h-14 rounded-xl overflow-hidden border border-slate-200 disabled:opacity-40 hover:scale-105 transition-transform"
+              disabled={images.includes(url) || images.length >= 8 || isUploading}
+              className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                images.includes(url)
+                  ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                  : "bg-white border-slate-200 text-slate-700 hover:border-[#00A896] hover:text-[#00A896] cursor-pointer"
+              }`}
             >
-              <Image
-                src={url}
-                alt={`Preset ${i}`}
-                fill
-                sizes="56px"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center text-white">
-                <Plus className="w-4 h-4" />
-              </div>
+              Photo #{i + 1}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Image Previews List */}
+      {/* Photo Previews Grid */}
       {images.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-          {images.map((img, index) => (
-            <div
-              key={index}
-              className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200 group bg-slate-100"
-            >
-              <Image
-                src={img}
-                alt={`Photo ${index + 1}`}
-                fill
-                sizes="(max-width: 640px) 50vw, 25vw"
-                className="object-cover"
-              />
+        <div className="space-y-2 pt-2">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>Click &apos;★ Cover&apos; to set the first image as the primary cover photo</span>
+          </div>
 
-              {index === 0 && (
-                <span className="absolute top-1.5 left-1.5 bg-[#0A2540] text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> Cover
-                </span>
-              )}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {images.map((url, index) => {
+              const isCover = index === 0;
 
-              {/* Action Buttons */}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                {index !== 0 && (
-                  <button
-                    type="button"
-                    onClick={() => handleSetCover(index)}
-                    className="p-1.5 rounded-lg bg-white/90 text-slate-800 hover:bg-white text-xs font-bold"
-                    title="Make Cover Photo"
-                  >
-                    Set Cover
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleRemove(index)}
-                  className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
-                  title="Remove Photo"
+              return (
+                <div
+                  key={index}
+                  className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 group transition-all ${
+                    isCover
+                      ? "border-[#FF6A00] ring-2 ring-[#FF6A00]/20 shadow-sm"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
                 >
-                  <X className="w-4 h-4" />
-                </button>
+                  <Image
+                    src={url}
+                    alt={`Upload ${index + 1}`}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 25vw"
+                    className="object-cover"
+                  />
+
+                  {/* Cover Badge */}
+                  {isCover && (
+                    <div className="absolute top-2 left-2 bg-[#FF6A00] text-white text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
+                      <Star className="w-2.5 h-2.5 fill-white" />
+                      <span>COVER</span>
+                    </div>
+                  )}
+
+                  {/* Actions overlay */}
+                  <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2">
+                    {!isCover && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetCover(index)}
+                        className="bg-white/90 hover:bg-white text-slate-900 text-[10px] font-bold px-2 py-1 rounded shadow-xs cursor-pointer"
+                      >
+                        Set Cover
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(index)}
+                      className="bg-rose-600 hover:bg-rose-700 text-white p-1.5 rounded-full shadow-xs cursor-pointer"
+                      title="Remove image"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Empty placeholder slots */}
+            {Array.from({ length: Math.max(0, 4 - images.length) }).map((_, i) => (
+              <div
+                key={`empty-${i}`}
+                className="aspect-[4/3] rounded-xl border border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center text-slate-300"
+              >
+                <Plus className="w-5 h-5 stroke-[1.5]" />
+                <span className="text-[10px] font-medium mt-1">Empty Slot</span>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/common/Button";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { useMarketplace } from "@/context/MarketplaceContext";
 import {
   MapPin,
@@ -257,6 +258,9 @@ export function MainHeader() {
             >
               <MessageSquare className="w-5 h-5" />
             </Link>
+
+            {/* Real-time Notification Bell */}
+            <NotificationBell />
 
             {/* Login or User Profile */}
             {user ? (

@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Product } from "@/types/product";
 import { ChatMessage } from "@/types/chat";
 import { MessageBubble } from "./MessageBubble";
 import { formatPrice } from "@/lib/utils";
+import api from "@/lib/api";
+import { getSocket } from "@/lib/socket";
+import { useMarketplace } from "@/context/MarketplaceContext";
 import { Send, Sparkles, ShieldAlert } from "lucide-react";
 
 interface ChatWindowProps {
@@ -14,6 +17,7 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ product }: ChatWindowProps) {
+  const { user } = useMarketplace();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "m-1",
@@ -25,6 +29,77 @@ export function ChatWindow({ product }: ChatWindowProps) {
     },
   ]);
   const [inputText, setInputText] = useState("");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function initChat() {
+      if (!user) return;
+      try {
+        const res = await api.post("/chat/conversations", {
+          advertisementId: product.id,
+          sellerId: product.seller.id,
+        });
+
+        if (mounted && res.data.conversation?._id) {
+          const convId = res.data.conversation._id;
+          setConversationId(convId);
+
+          const socket = getSocket();
+          socket.emit("chat:join", { conversationId: convId });
+
+          if (res.data.messages && res.data.messages.length > 0) {
+            const mapped: ChatMessage[] = res.data.messages.map((m: any) => ({
+              id: m._id,
+              senderId: m.sender?._id || m.sender,
+              senderName: m.sender?.name || "User",
+              text: m.text,
+              timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              isMe: m.sender?._id === user?.id || m.sender === user?.id,
+            }));
+            setMessages(mapped);
+          }
+        }
+      } catch {
+        // Fallback to local interactive chat simulation
+      }
+    }
+
+    if (product.id) {
+      initChat();
+    }
+
+    const socket = getSocket();
+    const handleNewMessage = (msg: any) => {
+      const isSenderMe = msg.sender?._id === user?.id || msg.sender === user?.id;
+      if (!isSenderMe) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: msg._id || `m-${Date.now()}`,
+            senderId: msg.sender?._id || msg.sender,
+            senderName: msg.sender?.name || "Seller",
+            text: msg.text,
+            timestamp: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isMe: false,
+          },
+        ]);
+      }
+    };
+
+    socket.on("message:new", handleNewMessage);
+
+    return () => {
+      mounted = false;
+      socket.off("message:new", handleNewMessage);
+    };
+  }, [product.id, product.seller.id, user]);
 
   const QUICK_REPLIES = [
     "Is this still available?",
@@ -39,8 +114,8 @@ export function ChatWindow({ product }: ChatWindowProps) {
 
     const newMsg: ChatMessage = {
       id: `m-${Date.now()}`,
-      senderId: "me",
-      senderName: "Me",
+      senderId: user?.id || "me",
+      senderName: user?.name || "Me",
       text: text,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       isMe: true,
@@ -49,11 +124,22 @@ export function ChatWindow({ product }: ChatWindowProps) {
     setMessages((prev) => [...prev, newMsg]);
     if (!textToSend) setInputText("");
 
-    // Simulate realistic seller response after 1.2 seconds
+    // Send to backend via Socket.IO if conversation exists
+    if (conversationId) {
+      const socket = getSocket();
+      socket.emit("message:send", {
+        conversationId,
+        text,
+      });
+    }
+
+    // Simulate realistic seller response after 1.2 seconds if not connected to live second user
     setTimeout(() => {
       const sellerReplies = [
         "Yes, it is available! Where are you located?",
-        `I can offer a small discount if you can pick it up today from ${product.location.area || product.location.city}.`,
+        `I can offer a small discount if you can pick it up today from ${
+          product.location.area || product.location.city
+        }.`,
         "Sure, you are welcome to come and check it before deciding.",
         "Yes, original bill and accessories are intact as listed in the ad description.",
       ];
@@ -69,7 +155,7 @@ export function ChatWindow({ product }: ChatWindowProps) {
       };
 
       setMessages((prev) => [...prev, sellerMsg]);
-    }, 1200);
+    }, 1400);
   };
 
   return (
