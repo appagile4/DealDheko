@@ -6,6 +6,10 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   isMe: boolean;
+  isRead?: boolean;
+  attachments?: string[];
+  messageType?: "text" | "image" | "location";
+  createdAt?: string;
 }
 
 export interface ChatConversation {
@@ -14,11 +18,16 @@ export interface ChatConversation {
   productTitle: string;
   productPrice: number;
   productImage: string;
+  productSlug?: string;
+  productLocation?: string;
   sellerId: string;
   sellerName: string;
   sellerAvatar: string;
+  sellerPhone?: string;
+  sellerVerified?: boolean;
   lastMessage: string;
   lastMessageTime: string;
   unreadCount: number;
-  messages: ChatMessage[];
+  messages?: ChatMessage[];
+  updatedAt?: string;
 }

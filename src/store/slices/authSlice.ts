@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import api from "@/lib/api";
+import { updateSocketAuth, disconnectSocket } from "@/lib/socket";
 
 export interface UserProfile {
   _id: string;
@@ -298,6 +299,7 @@ export const authSlice = createSlice({
         if (typeof window !== "undefined") {
           localStorage.setItem("dealdoko_token", action.payload.token);
           localStorage.setItem("deal_dheko_user", JSON.stringify(action.payload.user));
+          updateSocketAuth(action.payload.token);
         }
       })
       .addCase(verifyOtp.rejected, (state, action) => {
@@ -341,6 +343,7 @@ export const authSlice = createSlice({
         if (typeof window !== "undefined") {
           localStorage.setItem("dealdoko_token", action.payload.token);
           localStorage.setItem("deal_dheko_user", JSON.stringify(action.payload.user));
+          updateSocketAuth(action.payload.token);
         }
       })
       .addCase(loginUser.rejected, (state, action: any) => {
@@ -358,6 +361,7 @@ export const authSlice = createSlice({
 
     // Logout
     builder.addCase(logoutUser.fulfilled, (state) => {
+      disconnectSocket();
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;

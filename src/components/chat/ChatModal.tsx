@@ -14,10 +14,11 @@ export function ChatModal() {
     <Modal
       isOpen={isChatModalOpen}
       onClose={closeChat}
-      title={`Chat with ${activeChatProduct.seller.name}`}
-      maxWidth="lg"
+      maxWidth="xl"
     >
-      <ChatWindow product={activeChatProduct} onClose={closeChat} />
+      <div className="h-[620px] max-h-[85vh] flex flex-col">
+        <ChatWindow product={activeChatProduct} onClose={closeChat} />
+      </div>
     </Modal>
   );
 }

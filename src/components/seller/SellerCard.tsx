@@ -15,8 +15,18 @@ interface SellerCardProps {
 }
 
 export function SellerCard({ seller, product }: SellerCardProps) {
-  const { openChat } = useMarketplace();
+  const { openChat, user, openAuthModal } = useMarketplace();
   const [showPhone, setShowPhone] = useState(false);
+
+  const isOwner = Boolean(user && (user.id === seller.id || (user as any)._id === seller.id));
+
+  const handleChatClick = () => {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    openChat(product);
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5 shadow-xs">
@@ -69,9 +79,10 @@ export function SellerCard({ seller, product }: SellerCardProps) {
           variant="primary"
           className="w-full py-3"
           leftIcon={<MessageSquare className="w-4 h-4" />}
-          onClick={() => openChat(product)}
+          disabled={isOwner}
+          onClick={handleChatClick}
         >
-          Chat with Seller
+          {isOwner ? "Your Advertisement" : "Chat with Seller"}
         </Button>
 
         <Button
