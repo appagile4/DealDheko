@@ -2,11 +2,13 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Seller } from "@/types/seller";
 import { Product } from "@/types/product";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { Button } from "@/components/common/Button";
-import { BadgeCheck, MapPin, Calendar, Star, Phone, ShieldCheck } from "lucide-react";
+import { useMarketplace } from "@/context/MarketplaceContext";
+import { BadgeCheck, MapPin, Calendar, Star, Phone, ShieldCheck, UserCheck } from "lucide-react";
 
 interface SellerProfileProps {
   seller: Seller;
@@ -14,7 +16,20 @@ interface SellerProfileProps {
 }
 
 export function SellerProfile({ seller, products }: SellerProfileProps) {
+  const { user } = useMarketplace();
   const [showPhone, setShowPhone] = useState(false);
+
+  const currentUserId = user ? String(user.id || (user as any)._id || "") : "";
+  const currentUserEmail = user?.email ? user.email.toLowerCase().trim() : "";
+  const sellerId = String(seller?.id || (seller as any)?._id || "");
+  const sellerEmail = (seller?.email || "").toLowerCase().trim();
+
+  const isOwner = Boolean(
+    user && (
+      (currentUserId && sellerId && currentUserId === sellerId) ||
+      (currentUserEmail && sellerEmail && currentUserEmail === sellerEmail)
+    )
+  );
 
   return (
     <div className="space-y-8">
@@ -62,14 +77,26 @@ export function SellerProfile({ seller, products }: SellerProfileProps) {
           </div>
 
           <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto"
-              leftIcon={<Phone className="w-4 h-4 text-[#00A896]" />}
-              onClick={() => setShowPhone(!showPhone)}
-            >
-              {showPhone ? (seller.phone || "+91 98765 43210") : "Show Phone Number"}
-            </Button>
+            {!isOwner ? (
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                leftIcon={<Phone className="w-4 h-4 text-[#00A896]" />}
+                onClick={() => setShowPhone(!showPhone)}
+              >
+                {showPhone ? (seller.phone || "+977 98412 34567") : "Show Phone Number"}
+              </Button>
+            ) : (
+              <Link href="/profile">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto text-[#0047BA] border-[#0047BA]/30 hover:bg-blue-50"
+                  leftIcon={<UserCheck className="w-4 h-4 text-[#0047BA]" />}
+                >
+                  Edit Your Profile
+                </Button>
+              </Link>
+            )}
             <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
               <ShieldCheck className="w-4 h-4" />
               <span>Identity &amp; Phone Verified</span>

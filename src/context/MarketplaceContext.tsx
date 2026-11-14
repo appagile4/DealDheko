@@ -241,6 +241,22 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
 
   const openChat = (product?: Product) => {
     if (product) {
+      const currentUserId = user ? String(user.id || (user as any)._id || "") : "";
+      const currentUserEmail = user?.email ? user.email.toLowerCase().trim() : "";
+      const sellerId = String((product.seller as any)?._id || product.seller?.id || (product as any)?.seller || "");
+      const sellerEmail = (product.seller?.email || (product as any)?.sellerContact?.email || "").toLowerCase().trim();
+
+      const isOwner = Boolean(
+        user && (
+          (currentUserId && sellerId && currentUserId === sellerId) ||
+          (currentUserEmail && sellerEmail && currentUserEmail === sellerEmail)
+        )
+      );
+
+      if (isOwner) {
+        return; // Prevent user from chatting on their own product
+      }
+
       setActiveChatProduct(product);
     } else {
       setActiveChatProduct(MOCK_PRODUCTS[0]);

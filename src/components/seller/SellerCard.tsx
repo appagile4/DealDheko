@@ -7,7 +7,7 @@ import { Seller } from "@/types/seller";
 import { Product } from "@/types/product";
 import { Button } from "@/components/common/Button";
 import { useMarketplace } from "@/context/MarketplaceContext";
-import { BadgeCheck, MessageSquare, Phone, ChevronRight, Shield, Star } from "lucide-react";
+import { BadgeCheck, MessageSquare, Phone, ChevronRight, Shield, Star, CheckCircle } from "lucide-react";
 
 interface SellerCardProps {
   seller: Seller;
@@ -18,13 +18,48 @@ export function SellerCard({ seller, product }: SellerCardProps) {
   const { openChat, user, openAuthModal } = useMarketplace();
   const [showPhone, setShowPhone] = useState(false);
 
-  const isOwner = Boolean(user && (user.id === seller.id || (user as any)._id === seller.id));
+  // Robust check to determine if the logged-in user is the owner of this product
+  const currentUserId = user ? String(user.id || (user as any)._id || "") : "";
+  const currentUserEmail = user?.email ? user.email.toLowerCase().trim() : "";
+  const currentUserPhone = user?.phone ? user.phone.replace(/\D/g, "") : "";
+
+  const sellerId = String(
+    seller?.id ||
+    (seller as any)?._id ||
+    (product as any)?.seller?._id ||
+    (product as any)?.seller?.id ||
+    (typeof product?.seller === "string" ? product.seller : "") ||
+    ""
+  );
+
+  const sellerEmail = (
+    seller?.email ||
+    (product as any)?.sellerContact?.email ||
+    (product as any)?.seller?.email ||
+    ""
+  ).toLowerCase().trim();
+
+  const sellerPhone = (
+    seller?.phone ||
+    (product as any)?.sellerContact?.phone ||
+    (product as any)?.seller?.phone ||
+    ""
+  ).replace(/\D/g, "");
+
+  const isOwner = Boolean(
+    user && (
+      (currentUserId && sellerId && currentUserId === sellerId) ||
+      (currentUserEmail && sellerEmail && currentUserEmail === sellerEmail) ||
+      (currentUserPhone && sellerPhone && currentUserPhone === sellerPhone)
+    )
+  );
 
   const handleChatClick = () => {
     if (!user) {
       openAuthModal();
       return;
     }
+    if (isOwner) return;
     openChat(product);
   };
 
@@ -73,27 +108,52 @@ export function SellerCard({ seller, product }: SellerCardProps) {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="space-y-2.5">
-        <Button
-          variant="primary"
-          className="w-full py-3"
-          leftIcon={<MessageSquare className="w-4 h-4" />}
-          disabled={isOwner}
-          onClick={handleChatClick}
-        >
-          {isOwner ? "Your Advertisement" : "Chat with Seller"}
-        </Button>
+      {/* Actions: If user sees their own product, DO NOT show chat and phone options */}
+      {!isOwner ? (
+        <div className="space-y-2.5">
+          <Button
+            variant="primary"
+            className="w-full py-3"
+            leftIcon={<MessageSquare className="w-4 h-4" />}
+            onClick={handleChatClick}
+          >
+            Chat with Seller
+          </Button>
 
-        <Button
-          variant="outline"
-          className="w-full py-2.5 text-xs"
-          leftIcon={<Phone className="w-4 h-4 text-[#FF6A00]" />}
-          onClick={() => setShowPhone(!showPhone)}
-        >
-          {showPhone ? (seller.phone || "+977 98412 34567") : "Show Phone Number"}
-        </Button>
-      </div>
+          <Button
+            variant="outline"
+            className="w-full py-2.5 text-xs"
+            leftIcon={<Phone className="w-4 h-4 text-[#FF6A00]" />}
+            onClick={() => setShowPhone(!showPhone)}
+          >
+            {showPhone ? (seller.phone || "+977 98412 34567") : "Show Phone Number"}
+          </Button>
+        </div>
+      ) : (
+        <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3.5 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#0047BA]">
+            <CheckCircle className="w-4 h-4 text-[#0047BA] shrink-0" />
+            <span>This is your advertisement</span>
+          </div>
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            You posted this listing. Buyer messages and calls will be directed to you.
+          </p>
+          <div className="pt-1 flex items-center gap-2">
+            <Link
+              href="/profile"
+              className="flex-1 text-center py-2 px-3 text-xs font-bold text-[#0047BA] hover:text-[#003893] bg-white border border-blue-200 hover:border-blue-300 rounded-lg transition-colors shadow-2xs"
+            >
+              Manage in My Ads
+            </Link>
+            <Link
+              href="/chat"
+              className="flex-1 text-center py-2 px-3 text-xs font-bold text-white bg-[#0047BA] hover:bg-[#003893] rounded-lg transition-colors shadow-2xs"
+            >
+              View Inquiries
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Safety Note & Link */}
       <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
