@@ -192,8 +192,7 @@ export function MainHeader() {
         <div className="flex items-center justify-between min-h-[64px] sm:min-h-[84px] py-2 gap-2 sm:gap-4 lg:gap-6">
           {/* Logo */}
           <div className="shrink-0 flex items-center">
-            <Logo size="md" className="sm:hidden" />
-            <Logo size="lg" className="hidden sm:inline-flex" />
+            <Logo size="md" />
           </div>
 
           {/* Location Picker (Desktop & Tablet) */}
