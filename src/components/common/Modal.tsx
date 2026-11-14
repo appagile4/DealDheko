@@ -10,6 +10,8 @@ interface ModalProps {
   description?: string;
   children: React.ReactNode;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "4xl";
+  hideCloseButton?: boolean;
+  noPadding?: boolean;
 }
 
 export function Modal({
@@ -19,6 +21,8 @@ export function Modal({
   description,
   children,
   maxWidth = "md",
+  hideCloseButton = false,
+  noPadding = false,
 }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -71,7 +75,7 @@ export function Modal({
           </div>
         )}
 
-        {!title && !description && (
+        {!hideCloseButton && !title && !description && (
           <button
             onClick={onClose}
             className="absolute top-4 right-4 z-20 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors"
@@ -81,7 +85,7 @@ export function Modal({
         )}
 
         {/* Content */}
-        <div className="p-5 max-h-[85vh] overflow-y-auto">{children}</div>
+        <div className={noPadding ? "overflow-hidden" : "p-5 max-h-[85vh] overflow-y-auto"}>{children}</div>
       </div>
     </div>
   );

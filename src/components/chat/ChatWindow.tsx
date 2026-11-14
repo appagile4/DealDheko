@@ -122,6 +122,7 @@ export function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isSendingRef = useRef(false);
 
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -225,18 +226,77 @@ export function ChatWindow({
     }
 
     const handleNewMessage = (msg: any) => {
-      if (msg.conversation && msg.conversation.toString() !== activeConvId.toString()) {
+      if (msg.conversation && activeConvId && msg.conversation.toString() !== activeConvId.toString()) {
         return;
       }
 
       const senderId = msg.sender?._id || msg.sender;
       const isMe = senderId === user?.id || senderId === (user as any)?._id;
 
+      const normalizedMsg: ChatMessage = {
+        ...msg,
+        id: (msg._id || msg.id).toString(),
+        _id: (msg._id || msg.id).toString(),
+        clientMessageId: msg.clientMessageId,
+        text: msg.text || msg.message || "",
+        message: msg.text || msg.message || "",
+        isMe,
+      };
+
       setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id || (msg.clientMessageId && m.clientMessageId === msg.clientMessageId))) {
-          return prev.map((m) => (m.id === msg.id || (msg.clientMessageId && m.clientMessageId === msg.clientMessageId) ? msg : m));
+        // 1. Try matching by clientMessageId against optimistic message
+        if (normalizedMsg.clientMessageId) {
+          const clientIdx = prev.findIndex(
+            (m) =>
+              m.clientMessageId === normalizedMsg.clientMessageId ||
+              m.id === normalizedMsg.clientMessageId ||
+              m._id === normalizedMsg.clientMessageId
+          );
+          if (clientIdx !== -1) {
+            const updated = [...prev];
+            updated[clientIdx] = {
+              ...updated[clientIdx],
+              ...normalizedMsg,
+              isMe,
+            };
+            return updated;
+          }
         }
-        return [...prev, msg];
+
+        // 2. Try matching by database ID
+        const idIdx = prev.findIndex(
+          (m) => m.id === normalizedMsg.id || m._id === normalizedMsg._id
+        );
+        if (idIdx !== -1) {
+          const updated = [...prev];
+          updated[idIdx] = {
+            ...updated[idIdx],
+            ...normalizedMsg,
+            isMe,
+          };
+          return updated;
+        }
+
+        // 3. Prevent duplicate: same sender and identical text within recent window (4 seconds)
+        if (isMe) {
+          const duplicateIdx = prev.findIndex(
+            (m) =>
+              m.isMe &&
+              (m.text === normalizedMsg.text || m.message === normalizedMsg.message) &&
+              Math.abs(new Date(m.createdAt || 0).getTime() - new Date(normalizedMsg.createdAt || 0).getTime()) < 4000
+          );
+          if (duplicateIdx !== -1) {
+            const updated = [...prev];
+            updated[duplicateIdx] = {
+              ...updated[duplicateIdx],
+              ...normalizedMsg,
+              isMe,
+            };
+            return updated;
+          }
+        }
+
+        return [...prev, normalizedMsg];
       });
 
       if (!isMe) {
@@ -390,6 +450,7 @@ export function ChatWindow({
 
   // 6. Send Message with Socket.IO & Cloudinary Attachments
   const handleSendMessage = async (textOverride?: string) => {
+    if (isSendingRef.current) return;
     const textToSend = (textOverride || inputText).trim();
     if (!textToSend && !pendingFile) return;
 
@@ -397,6 +458,8 @@ export function ChatWindow({
       openAuthModal();
       return;
     }
+
+    isSendingRef.current = true;
 
     setInputText("");
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -416,6 +479,7 @@ export function ChatWindow({
       } catch (err: any) {
         alert("Failed to upload image attachment.");
         setIsUploading(false);
+        isSendingRef.current = false;
         return;
       } finally {
         setIsUploading(false);
@@ -429,6 +493,7 @@ export function ChatWindow({
     const optimisticMsg: ChatMessage = {
       id: clientMessageId,
       _id: clientMessageId,
+      clientMessageId,
       conversation: activeConvId || undefined,
       senderId: user.id || (user as any)._id,
       senderName: user.name,
@@ -503,6 +568,10 @@ export function ChatWindow({
           setChatError("Could not deliver message. Please check connection.");
         }
       }
+    } finally {
+      setTimeout(() => {
+        isSendingRef.current = false;
+      }, 350);
     }
   };
 

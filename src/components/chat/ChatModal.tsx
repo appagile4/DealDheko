@@ -15,8 +15,10 @@ export function ChatModal() {
       isOpen={isChatModalOpen}
       onClose={closeChat}
       maxWidth="xl"
+      hideCloseButton
+      noPadding
     >
-      <div className="h-[620px] max-h-[85vh] flex flex-col">
+      <div className="h-[640px] max-h-[88vh] flex flex-col">
         <ChatWindow product={activeChatProduct} onClose={closeChat} />
       </div>
     </Modal>
