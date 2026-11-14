@@ -3,104 +3,65 @@
 import React, { useState, useEffect, Suspense, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { formatPrice } from "@/lib/utils";
 import api from "@/lib/api";
 import { getSocket } from "@/lib/socket";
 import { useMarketplace } from "@/context/MarketplaceContext";
+import { useAppDispatch, useAppSelector } from "@/store";
+import {
+  fetchConversations,
+  setActiveConversation,
+  addIncomingMessage,
+  updateMessageStatus,
+  setUserPresence,
+} from "@/store/slices/chatSlice";
 import {
   MessageSquare,
-  ArrowLeft,
-  ShieldCheck,
   Search,
-  Check,
   CheckCheck,
   RefreshCw,
   ShoppingBag,
   Lock,
-  Smile,
   BadgeCheck,
 } from "lucide-react";
 
-interface BackendConversation {
-  _id: string;
-  participants: Array<{
-    _id: string;
-    name: string;
-    avatar?: string;
-    isVerified?: boolean;
-    city?: string;
-    phone?: string;
-  }>;
-  advertisement?: {
-    _id: string;
-    title: string;
-    slug?: string;
-    price: number;
-    images?: Array<{ url: string } | string>;
-    location?: { city?: string; area?: string };
-    status?: string;
-  };
-  lastMessage?: string;
-  lastMessageSender?: string;
-  lastMessageAt?: string;
-  unreadCount?: number;
-  updatedAt?: string;
-}
-
 function ChatContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const dispatch = useAppDispatch();
   const { user, openAuthModal } = useMarketplace();
 
   const queryConvId = searchParams.get("conversationId");
   const queryAdId = searchParams.get("adId");
   const querySellerId = searchParams.get("sellerId");
 
-  const [conversations, setConversations] = useState<BackendConversation[]>([]);
-  const [selectedConvId, setSelectedConvId] = useState<string | null>(queryConvId);
-  const [isLoading, setIsLoading] = useState(true);
+  const conversations = useAppSelector((state) => state.chat.conversations);
+  const isLoading = useAppSelector((state) => state.chat.isLoadingConversations);
+  const selectedConvId = useAppSelector((state) => state.chat.activeConversationId);
+  const onlineUsers = useAppSelector((state) => state.chat.onlineUsers);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTab, setFilterTab] = useState<"all" | "unread">("all");
   const [showMobileChat, setShowMobileChat] = useState(false);
 
-  // Fetch real conversations from backend
-  const fetchConversations = async (showLoadingSpinner = false) => {
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
-    if (showLoadingSpinner) setIsLoading(true);
+  // 1. Initial conversations fetch
+  const handleRefresh = async () => {
+    if (!user) return;
     setIsRefreshing(true);
-
-    try {
-      const res = await api.get("/chat/conversations");
-      if (res.data?.success && Array.isArray(res.data.conversations)) {
-        const convList: BackendConversation[] = res.data.conversations;
-        setConversations(convList);
-
-        // If URL specified queryConvId and it exists, select it
-        if (queryConvId && convList.some((c) => c._id === queryConvId)) {
-          setSelectedConvId(queryConvId);
-          setShowMobileChat(true);
-        } else if (!selectedConvId && convList.length > 0) {
-          // Default to first conversation on desktop
-          setSelectedConvId(convList[0]._id);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load conversations:", err);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
+    await dispatch(fetchConversations());
+    setIsRefreshing(false);
   };
 
-  // If query params has adId and sellerId, initiate/find conversation
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchConversations());
+    }
+  }, [user, dispatch]);
+
+  // If query params specify an ad, initiate or select it
   useEffect(() => {
     async function initAdConversation() {
       if (!user || !queryAdId) return;
@@ -112,9 +73,9 @@ function ChatContent() {
 
         if (res.data?.conversation?._id) {
           const newId = res.data.conversation._id;
-          setSelectedConvId(newId);
+          dispatch(setActiveConversation(newId));
           setShowMobileChat(true);
-          fetchConversations();
+          dispatch(fetchConversations());
         }
       } catch (err) {
         console.error("Failed to initiate conversation from ad:", err);
@@ -122,70 +83,68 @@ function ChatContent() {
     }
 
     initAdConversation();
-  }, [queryAdId, querySellerId, user]);
+  }, [queryAdId, querySellerId, user, dispatch]);
 
+  // Set selected conversation from queryConvId or default to first
   useEffect(() => {
-    fetchConversations(true);
-  }, [user]);
+    if (queryConvId && conversations.some((c) => c.id === queryConvId || c._id === queryConvId)) {
+      dispatch(setActiveConversation(queryConvId));
+      setShowMobileChat(true);
+    } else if (!selectedConvId && conversations.length > 0) {
+      dispatch(setActiveConversation(conversations[0].id || conversations[0]._id || null));
+    }
+  }, [queryConvId, conversations, selectedConvId, dispatch]);
 
-  // Real-time Socket.IO listeners for new conversations / incoming message updates
+  // 2. Real-time Socket.IO synchronization for chat list
   useEffect(() => {
     if (!user) return;
     const socket = getSocket();
 
-    const handleNewMessageAlert = (data: {
-      conversationId: string;
-      message: any;
-      senderName?: string;
-    }) => {
-      setConversations((prev) => {
-        const existingIdx = prev.findIndex((c) => c._id === data.conversationId);
-        if (existingIdx !== -1) {
-          const updated = [...prev];
-          const target = { ...updated[existingIdx] };
-          target.lastMessage = data.message.message || data.message.text || target.lastMessage;
-          target.lastMessageAt = data.message.createdAt || new Date().toISOString();
-          target.lastMessageSender = data.message.sender?._id || data.message.sender;
+    const handleNewMessageAlert = (data: { conversationId: string; message: any }) => {
+      dispatch(addIncomingMessage(data.message));
+    };
 
-          // If this is not currently open, increment unread count
-          if (selectedConvId !== data.conversationId) {
-            target.unreadCount = (target.unreadCount || 0) + 1;
-          }
-
-          updated.splice(existingIdx, 1);
-          return [target, ...updated];
-        } else {
-          // If a new conversation was created elsewhere, re-fetch
-          fetchConversations();
-          return prev;
-        }
-      });
+    const handleMessageDelivered = (data: { conversationId: string; messageId: string }) => {
+      dispatch(
+        updateMessageStatus({
+          conversationId: data.conversationId,
+          messageId: data.messageId,
+          status: "delivered",
+        })
+      );
     };
 
     const handleMessagesRead = (data: { conversationId: string; readerId: string }) => {
-      // Clear unread badge if we are the reader
-      if (data.readerId === user.id) {
-        setConversations((prev) =>
-          prev.map((c) => (c._id === data.conversationId ? { ...c, unreadCount: 0 } : c))
-        );
-      }
+      dispatch(
+        updateMessageStatus({
+          conversationId: data.conversationId,
+          status: "read",
+        })
+      );
+    };
+
+    const handleOnlineStatus = (data: { userId: string; isOnline: boolean; lastSeen?: string | null }) => {
+      dispatch(setUserPresence(data));
     };
 
     socket.on("chat:new_message_alert", handleNewMessageAlert);
+    socket.on("message:delivered", handleMessageDelivered);
     socket.on("messages:read", handleMessagesRead);
+    socket.on("user:online_status", handleOnlineStatus);
 
     return () => {
       socket.off("chat:new_message_alert", handleNewMessageAlert);
+      socket.off("message:delivered", handleMessageDelivered);
       socket.off("messages:read", handleMessagesRead);
+      socket.off("user:online_status", handleOnlineStatus);
     };
-  }, [user, selectedConvId]);
+  }, [user, dispatch]);
 
-  // Filter conversations by search and tab
+  // Filter conversations
   const filteredConversations = useMemo(() => {
     return conversations.filter((conv) => {
-      const partner = conv.participants?.find((p) => p._id !== user?.id);
-      const partnerName = partner?.name || "User";
-      const adTitle = conv.advertisement?.title || "";
+      const partnerName = conv.sellerName || "User";
+      const adTitle = conv.productTitle || "";
       const matchesSearch =
         partnerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         adTitle.toLowerCase().includes(searchQuery.toLowerCase());
@@ -195,36 +154,15 @@ function ChatContent() {
       }
       return matchesSearch;
     });
-  }, [conversations, searchQuery, filterTab, user?.id]);
+  }, [conversations, searchQuery, filterTab]);
 
   const activeConversation = useMemo(() => {
-    return conversations.find((c) => c._id === selectedConvId);
+    return conversations.find((c) => c.id === selectedConvId || c._id === selectedConvId);
   }, [conversations, selectedConvId]);
 
-  const handleSelectConversation = (conv: BackendConversation) => {
-    setSelectedConvId(conv._id);
+  const handleSelect = (convId: string) => {
+    dispatch(setActiveConversation(convId));
     setShowMobileChat(true);
-
-    // Reset unread count locally
-    setConversations((prev) =>
-      prev.map((c) => (c._id === conv._id ? { ...c, unreadCount: 0 } : c))
-    );
-  };
-
-  const handleNewMessageSent = (convId: string, lastMsg: string) => {
-    setConversations((prev) => {
-      const idx = prev.findIndex((c) => c._id === convId);
-      if (idx !== -1) {
-        const updated = [...prev];
-        const target = { ...updated[idx] };
-        target.lastMessage = lastMsg;
-        target.lastMessageAt = new Date().toISOString();
-        target.lastMessageSender = user?.id;
-        updated.splice(idx, 1);
-        return [target, ...updated];
-      }
-      return prev;
-    });
   };
 
   const formatWhatsAppTime = (isoString?: string) => {
@@ -248,7 +186,6 @@ function ChatContent() {
       date.getFullYear() === yesterday.getFullYear();
 
     if (isYesterday) return "Yesterday";
-
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
@@ -258,9 +195,7 @@ function ChatContent() {
     <div className="space-y-4">
       <Breadcrumb items={breadcrumbItems} />
 
-      {/* Main Container - WhatsApp Web Shell */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-        {/* If user not logged in */}
         {!user ? (
           <div className="p-12 text-center max-w-md mx-auto space-y-4">
             <div className="w-16 h-16 rounded-full bg-[#0047BA]/10 text-[#0047BA] flex items-center justify-center mx-auto">
@@ -300,14 +235,14 @@ function ChatContent() {
                   <div>
                     <h2 className="text-sm font-bold text-slate-900">Chats</h2>
                     <span className="text-[11px] text-slate-500">
-                      {conversations.length} {conversations.length === 1 ? "conversation" : "conversations"}
+                      {conversations.length} {conversations.length === 1 ? "chat" : "chats"}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => fetchConversations()}
+                    onClick={handleRefresh}
                     disabled={isRefreshing}
                     className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 rounded-full transition-colors"
                     title="Refresh chats"
@@ -317,7 +252,7 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Search Bar (WhatsApp Web style) */}
+              {/* Search Bar */}
               <div className="p-2.5 bg-white border-b border-slate-100 shrink-0 space-y-2">
                 <div className="relative flex items-center bg-[#F0F2F5] rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-[#00A884]/30 focus-within:bg-white transition-all">
                   <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
@@ -363,7 +298,7 @@ function ChatContent() {
                 {isLoading ? (
                   <div className="p-8 text-center space-y-2">
                     <div className="w-6 h-6 border-2 border-[#00A884] border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-xs text-slate-500">Loading your conversations...</p>
+                    <p className="text-xs text-slate-500">Loading chats...</p>
                   </div>
                 ) : filteredConversations.length === 0 ? (
                   <div className="p-8 text-center space-y-3">
@@ -384,38 +319,31 @@ function ChatContent() {
                   </div>
                 ) : (
                   filteredConversations.map((conv) => {
-                    const isSelected = selectedConvId === conv._id;
-                    const partner = conv.participants?.find((p) => p._id !== user.id);
-                    const partnerName = partner?.name || "Seller";
-                    const partnerAvatar =
-                      partner?.avatar ||
-                      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
-
-                    const adImage =
-                      typeof conv.advertisement?.images?.[0] === "string"
-                        ? conv.advertisement.images[0]
-                        : conv.advertisement?.images?.[0]?.url || "";
-
-                    const isLastMsgMe = conv.lastMessageSender === user.id;
+                    const convId = conv.id || conv._id || "";
+                    const isSelected = selectedConvId === convId;
+                    const partnerOnline = onlineUsers[conv.sellerId]?.isOnline;
                     const unread = conv.unreadCount || 0;
 
                     return (
                       <div
-                        key={conv._id}
-                        onClick={() => handleSelectConversation(conv)}
+                        key={convId}
+                        onClick={() => handleSelect(convId)}
                         className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors relative ${
                           isSelected ? "bg-[#F0F2F5]" : "hover:bg-slate-50"
                         }`}
                       >
-                        {/* Partner Avatar */}
+                        {/* Partner Avatar with Online Dot */}
                         <div className="relative w-12 h-12 rounded-full overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
                           <Image
-                            src={partnerAvatar}
-                            alt={partnerName}
+                            src={conv.sellerAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"}
+                            alt={conv.sellerName}
                             fill
                             sizes="48px"
                             className="object-cover"
                           />
+                          {partnerOnline && (
+                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25D366] border-2 border-white rounded-full" />
+                          )}
                         </div>
 
                         {/* Middle Info */}
@@ -423,9 +351,9 @@ function ChatContent() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 min-w-0">
                               <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                                {partnerName}
+                                {conv.sellerName}
                               </h4>
-                              {partner?.isVerified && (
+                              {conv.sellerVerified && (
                                 <BadgeCheck className="w-3.5 h-3.5 text-[#0047BA] shrink-0" />
                               )}
                             </div>
@@ -434,18 +362,18 @@ function ChatContent() {
                                 unread > 0 ? "text-[#25D366] font-bold" : "text-slate-400"
                               }`}
                             >
-                              {formatWhatsAppTime(conv.lastMessageAt || conv.updatedAt)}
+                              {formatWhatsAppTime(conv.lastMessageTime || conv.updatedAt)}
                             </span>
                           </div>
 
                           {/* Product Chip */}
-                          {conv.advertisement && (
+                          {conv.productTitle && (
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className="text-[10px] font-semibold text-[#0047BA] bg-blue-50/80 px-1.5 py-0.5 rounded truncate max-w-[170px]">
-                                🏷️ {conv.advertisement.title}
+                                🏷️ {conv.productTitle}
                               </span>
                               <span className="text-[10px] font-bold text-slate-700">
-                                {formatPrice(conv.advertisement.price)}
+                                {formatPrice(conv.productPrice)}
                               </span>
                             </div>
                           )}
@@ -453,13 +381,9 @@ function ChatContent() {
                           {/* Last message preview */}
                           <div className="flex items-center justify-between mt-1">
                             <p className="text-xs text-slate-500 truncate flex items-center gap-1">
-                              {isLastMsgMe && (
-                                <CheckCheck className="w-3.5 h-3.5 text-slate-400 shrink-0 inline" />
-                              )}
                               <span>{conv.lastMessage || "Click to open chat"}</span>
                             </p>
 
-                            {/* WhatsApp Green Unread Badge */}
                             {unread > 0 && (
                               <span className="min-w-5 h-5 px-1.5 bg-[#25D366] text-white text-[10px] font-bold rounded-full flex items-center justify-center shrink-0 ml-1 shadow-2xs">
                                 {unread}
@@ -468,11 +392,11 @@ function ChatContent() {
                           </div>
                         </div>
 
-                        {/* Product mini thumbnail on far right */}
-                        {adImage && (
+                        {/* Product Thumbnail */}
+                        {conv.productImage && (
                           <div className="relative w-9 h-9 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shrink-0 ml-1">
                             <Image
-                              src={adImage}
+                              src={conv.productImage}
                               alt="Ad"
                               fill
                               sizes="36px"
@@ -495,13 +419,11 @@ function ChatContent() {
             >
               {activeConversation ? (
                 <ChatWindow
-                  conversationId={activeConversation._id}
+                  conversationId={activeConversation.id || activeConversation._id}
                   initialConversation={activeConversation}
                   onBack={() => setShowMobileChat(false)}
-                  onNewMessageSent={handleNewMessageSent}
                 />
               ) : (
-                /* Authentic WhatsApp Web Placeholder Screen */
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#F0F2F5] border-b-4 border-[#00A884]">
                   <div className="max-w-md space-y-4">
                     <div className="w-24 h-24 rounded-full bg-white shadow-xs flex items-center justify-center mx-auto border border-slate-200">

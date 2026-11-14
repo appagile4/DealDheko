@@ -4,12 +4,19 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Product } from "@/types/product";
-import { ChatMessage, ChatConversation } from "@/types/chat";
+import { ChatMessage, MessageAttachment } from "@/types/chat";
 import { MessageBubble } from "./MessageBubble";
 import { formatPrice } from "@/lib/utils";
 import api from "@/lib/api";
 import { getSocket } from "@/lib/socket";
 import { useMarketplace } from "@/context/MarketplaceContext";
+import { useAppDispatch, useAppSelector } from "@/store";
+import {
+  setReplyingTo,
+  clearReplyingTo,
+  uploadAttachment,
+  deleteMessageThunk,
+} from "@/store/slices/chatSlice";
 import {
   Send,
   Sparkles,
@@ -19,11 +26,10 @@ import {
   ExternalLink,
   Smile,
   Paperclip,
-  Check,
-  CheckCheck,
   ArrowLeft,
   X,
-  Maximize2,
+  Loader2,
+  Reply,
 } from "lucide-react";
 
 interface ChatWindowProps {
@@ -43,11 +49,14 @@ export function ChatWindow({
   onBack,
   onNewMessageSent,
 }: ChatWindowProps) {
+  const dispatch = useAppDispatch();
   const { user, openAuthModal } = useMarketplace();
+  const replyingTo = useAppSelector((state) => state.chat.replyingToMessage);
 
   const [activeConvId, setActiveConvId] = useState<string | null>(
     propConversationId || initialConversation?._id || null
   );
+
   const [partner, setPartner] = useState<{
     id: string;
     name: string;
@@ -55,12 +64,23 @@ export function ChatWindow({
     phone?: string;
     isVerified?: boolean;
     city?: string;
+    lastSeen?: string | null;
   }>({
-    id: propProduct?.seller?.id || initialConversation?.participants?.find((p: any) => p._id !== user?.id)?._id || "",
-    name: propProduct?.seller?.name || initialConversation?.participants?.find((p: any) => p._id !== user?.id)?.name || "Seller",
-    avatar: propProduct?.seller?.avatar || initialConversation?.participants?.find((p: any) => p._id !== user?.id)?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+    id:
+      propProduct?.seller?.id ||
+      initialConversation?.participants?.find((p: any) => p._id !== user?.id)?._id ||
+      "",
+    name:
+      propProduct?.seller?.name ||
+      initialConversation?.participants?.find((p: any) => p._id !== user?.id)?.name ||
+      "Seller",
+    avatar:
+      propProduct?.seller?.avatar ||
+      initialConversation?.participants?.find((p: any) => p._id !== user?.id)?.avatar ||
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
     phone: propProduct?.seller?.phone,
     isVerified: propProduct?.seller?.verified,
+    lastSeen: null,
   });
 
   const [adInfo, setAdInfo] = useState<{
@@ -84,12 +104,23 @@ export function ChatWindow({
   const [isTyping, setIsTyping] = useState(false);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const [isPartnerOnline, setIsPartnerOnline] = useState(false);
+  const [partnerLastSeen, setPartnerLastSeen] = useState<string | null>(null);
+
+  // Attachment states
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const [showEmojis, setShowEmojis] = useState(false);
   const [showPhoneInfo, setShowPhoneInfo] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
@@ -108,7 +139,6 @@ export function ChatWindow({
       try {
         let convId = activeConvId;
 
-        // If no convId but we have a product ad, get or create conversation
         if (!convId && propProduct?.id) {
           const res = await api.post("/chat/conversations", {
             advertisementId: propProduct.id,
@@ -121,7 +151,6 @@ export function ChatWindow({
             convId = res.data.conversation._id;
             setActiveConvId(convId);
 
-            // Populate partner from conversation participants
             const foundPartner = res.data.conversation.participants?.find(
               (p: any) => p._id !== user.id && p._id !== (user as any)._id
             );
@@ -133,7 +162,9 @@ export function ChatWindow({
                 phone: foundPartner.phone,
                 isVerified: foundPartner.isVerified,
                 city: foundPartner.city,
+                lastSeen: foundPartner.lastSeen,
               });
+              setPartnerLastSeen(foundPartner.lastSeen || null);
             }
 
             if (res.data.conversation.advertisement) {
@@ -148,50 +179,21 @@ export function ChatWindow({
               });
             }
 
-            if (res.data.messages && res.data.messages.length > 0) {
-              const mapped: ChatMessage[] = res.data.messages.map((m: any) => ({
-                id: m._id || m.id,
-                senderId: m.sender?._id || m.sender,
-                senderName: m.sender?.name || "User",
-                senderAvatar: m.sender?.avatar,
-                text: m.message || m.text || "",
-                timestamp: new Date(m.createdAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-                isMe: (m.sender?._id || m.sender) === user.id || (m.sender?._id || m.sender) === (user as any)._id,
-                isRead: m.isRead,
-                createdAt: m.createdAt,
-              }));
-              setMessages(mapped);
+            if (res.data.messages) {
+              setMessages(res.data.messages);
             }
           }
         } else if (convId) {
-          // Load messages for existing conversation
-          const res = await api.get(`/chat/conversations/${convId}/messages`);
+          const res = await api.get(`/chat/conversations/${convId}/messages?limit=40`);
           if (!isMounted) return;
 
           if (res.data?.messages) {
-            const mapped: ChatMessage[] = res.data.messages.map((m: any) => ({
-              id: m._id || m.id,
-              senderId: m.sender?._id || m.sender,
-              senderName: m.sender?.name || "User",
-              senderAvatar: m.sender?.avatar,
-              text: m.message || m.text || "",
-              timestamp: new Date(m.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              isMe: (m.sender?._id || m.sender) === user.id || (m.sender?._id || m.sender) === (user as any)._id,
-              isRead: m.isRead,
-              createdAt: m.createdAt,
-            }));
-            setMessages(mapped);
+            setMessages(res.data.messages);
+            setHasMore(Boolean(res.data.hasMore));
           }
         }
       } catch (err: any) {
         if (!isMounted) return;
-        console.error("Chat init error:", err);
         setChatError(err.response?.data?.message || "Failed to load chat history.");
       } finally {
         if (isMounted) setIsLoadingMessages(false);
@@ -205,23 +207,20 @@ export function ChatWindow({
     };
   }, [propProduct?.id, propProduct?.seller?.id, propConversationId, user]);
 
-  // 2. Set up Socket.IO listeners and join conversation room
+  // 2. Socket.IO Listeners and Delivery Tracking
   useEffect(() => {
     if (!activeConvId) return;
 
     const socket = getSocket();
     const token = typeof window !== "undefined" ? localStorage.getItem("dealdoko_token") || "" : "";
 
-    // Join room
     socket.emit("chat:join", { conversationId: activeConvId, token });
-
-    // Mark conversation read on join
     socket.emit("chat:read", { conversationId: activeConvId, token });
 
-    // Check partner online status
     if (partner.id) {
       socket.emit("user:check_online", { userId: partner.id }, (res: any) => {
         if (res?.isOnline !== undefined) setIsPartnerOnline(res.isOnline);
+        if (res?.lastSeen) setPartnerLastSeen(res.lastSeen);
       });
     }
 
@@ -233,38 +232,35 @@ export function ChatWindow({
       const senderId = msg.sender?._id || msg.sender;
       const isMe = senderId === user?.id || senderId === (user as any)?._id;
 
-      const newMsg: ChatMessage = {
-        id: msg._id || msg.id || `m-${Date.now()}`,
-        senderId,
-        senderName: msg.sender?.name || "User",
-        senderAvatar: msg.sender?.avatar,
-        text: msg.message || msg.text || "",
-        timestamp: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isMe,
-        isRead: msg.isRead || false,
-        createdAt: msg.createdAt,
-      };
-
       setMessages((prev) => {
-        // avoid duplicates
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
+        if (prev.some((m) => m.id === msg.id || (msg.clientMessageId && m.clientMessageId === msg.clientMessageId))) {
+          return prev.map((m) => (m.id === msg.id || (msg.clientMessageId && m.clientMessageId === msg.clientMessageId) ? msg : m));
+        }
+        return [...prev, msg];
       });
 
-      // If partner sent it while we are in this window, mark as read
       if (!isMe) {
+        // Acknowledge delivery and read
+        socket.emit("message:delivered", { messageId: msg._id || msg.id, conversationId: activeConvId });
         socket.emit("chat:read", { conversationId: activeConvId, token });
         setIsPartnerTyping(false);
+      }
+    };
+
+    const handleMessageDelivered = (data: { messageId: string; conversationId: string; deliveredAt: string }) => {
+      if (data.conversationId === activeConvId) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.isMe && m.status === "sent" ? { ...m, status: "delivered", deliveredAt: data.deliveredAt } : m
+          )
+        );
       }
     };
 
     const handleMessagesRead = (data: { conversationId: string; readerId: string }) => {
       if (data.conversationId === activeConvId) {
         setMessages((prev) =>
-          prev.map((m) => (m.isMe ? { ...m, isRead: true } : m))
+          prev.map((m) => (m.isMe ? { ...m, status: "read", isRead: true } : m))
         );
       }
     };
@@ -275,103 +271,205 @@ export function ChatWindow({
       }
     };
 
-    const handleOnlineStatus = (data: { userId: string; isOnline: boolean }) => {
+    const handleOnlineStatus = (data: { userId: string; isOnline: boolean; lastSeen?: string | null }) => {
       if (data.userId === partner.id) {
         setIsPartnerOnline(data.isOnline);
+        if (data.lastSeen) setPartnerLastSeen(data.lastSeen);
+      }
+    };
+
+    const handleMessageDeleted = (data: { messageId: string; conversationId: string }) => {
+      if (data.conversationId === activeConvId) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === data.messageId || m._id === data.messageId
+              ? { ...m, isDeleted: true, text: "This message was deleted", message: "This message was deleted", attachments: [] }
+              : m
+          )
+        );
       }
     };
 
     socket.on("message:new", handleNewMessage);
+    socket.on("message:delivered", handleMessageDelivered);
     socket.on("messages:read", handleMessagesRead);
     socket.on("typing:update", handleTypingUpdate);
     socket.on("user:online_status", handleOnlineStatus);
+    socket.on("message:deleted", handleMessageDeleted);
 
     return () => {
       socket.emit("chat:leave", { conversationId: activeConvId });
       socket.off("message:new", handleNewMessage);
+      socket.off("message:delivered", handleMessageDelivered);
       socket.off("messages:read", handleMessagesRead);
       socket.off("typing:update", handleTypingUpdate);
       socket.off("user:online_status", handleOnlineStatus);
+      socket.off("message:deleted", handleMessageDeleted);
     };
   }, [activeConvId, partner.id, user]);
 
-  // Scroll to bottom whenever messages update
   useEffect(() => {
     scrollToBottom("smooth");
-  }, [messages, isPartnerTyping]);
+  }, [messages.length, isPartnerTyping]);
 
-  // 3. Handle typing notification emit
+  // 3. Load Older Messages (Pagination)
+  const handleLoadMore = async () => {
+    if (!activeConvId || isLoadingMore || !hasMore || messages.length === 0) return;
+    setIsLoadingMore(true);
+
+    try {
+      const oldestMessage = messages[0];
+      const res = await api.get(
+        `/chat/conversations/${activeConvId}/messages?before=${encodeURIComponent(
+          oldestMessage.createdAt || ""
+        )}&limit=30`
+      );
+
+      if (res.data?.success && res.data.messages.length > 0) {
+        const container = messagesContainerRef.current;
+        const prevScrollHeight = container ? container.scrollHeight : 0;
+
+        setMessages((prev) => [...res.data.messages, ...prev]);
+        setHasMore(Boolean(res.data.hasMore));
+
+        // Preserve scroll position
+        setTimeout(() => {
+          if (container) {
+            container.scrollTop = container.scrollHeight - prevScrollHeight;
+          }
+        }, 50);
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error("Pagination error:", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // 4. Typing Handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
-
     if (!activeConvId) return;
-    const socket = getSocket();
 
+    const socket = getSocket();
     if (!isTyping) {
       setIsTyping(true);
       socket.emit("typing:start", { conversationId: activeConvId });
     }
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
       socket.emit("typing:stop", { conversationId: activeConvId });
     }, 1500);
   };
 
-  // 4. Send Message via Socket.IO with REST Fallback
+  // 5. Attachment Selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size exceeds 10MB limit.");
+      return;
+    }
+
+    setPendingFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+  };
+
+  const removePendingFile = () => {
+    setPendingFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // 6. Send Message with Socket.IO & Cloudinary Attachments
   const handleSendMessage = async (textOverride?: string) => {
     const textToSend = (textOverride || inputText).trim();
-    if (!textToSend) return;
+    if (!textToSend && !pendingFile) return;
 
     if (!user) {
       openAuthModal();
       return;
     }
 
-    if (!textOverride) {
-      setInputText("");
-    }
-
-    // Clear typing status immediately
+    setInputText("");
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     setIsTyping(false);
-    if (activeConvId) {
-      getSocket().emit("typing:stop", { conversationId: activeConvId });
+    if (activeConvId) getSocket().emit("typing:stop", { conversationId: activeConvId });
+
+    let attachments: MessageAttachment[] = [];
+
+    // Upload attachment to Cloudinary if selected
+    if (pendingFile) {
+      setIsUploading(true);
+      try {
+        const uploadRes = await dispatch(uploadAttachment(pendingFile)).unwrap();
+        if (uploadRes) {
+          attachments = [uploadRes];
+        }
+      } catch (err: any) {
+        alert("Failed to upload image attachment.");
+        setIsUploading(false);
+        return;
+      } finally {
+        setIsUploading(false);
+        removePendingFile();
+      }
     }
 
-    // Optimistic UI message
-    const tempId = `temp-${Date.now()}`;
+    const clientMessageId = `cmsg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    // Optimistic message
     const optimisticMsg: ChatMessage = {
-      id: tempId,
+      id: clientMessageId,
+      _id: clientMessageId,
+      conversation: activeConvId || undefined,
       senderId: user.id || (user as any)._id,
       senderName: user.name,
-      text: textToSend,
+      text: textToSend || (attachments.length > 0 ? "Photo" : ""),
+      message: textToSend || (attachments.length > 0 ? "Photo" : ""),
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       isMe: true,
-      isRead: false,
+      status: "sent",
+      attachments,
+      replyTo: replyingTo
+        ? {
+            _id: replyingTo.id,
+            text: replyingTo.text,
+            message: replyingTo.message,
+            sender: { _id: replyingTo.senderId, name: replyingTo.senderName },
+          }
+        : undefined,
+      createdAt: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
     if (onNewMessageSent && activeConvId) {
-      onNewMessageSent(activeConvId, textToSend);
+      onNewMessageSent(activeConvId, textToSend || "Photo");
     }
+
+    // Clear reply preview after queueing
+    dispatch(clearReplyingTo());
 
     const token = typeof window !== "undefined" ? localStorage.getItem("dealdoko_token") || "" : "";
 
     try {
       if (activeConvId) {
-        const socket = getSocket();
-        socket.emit("message:send", {
+        getSocket().emit("message:send", {
           conversationId: activeConvId,
           text: textToSend,
+          attachments,
+          replyTo: optimisticMsg.replyTo?._id,
+          clientMessageId,
           token,
         });
       } else if (propProduct?.id) {
-        // Fallback: initiate conversation via REST
         const res = await api.post("/chat/conversations", {
           advertisementId: propProduct.id,
           sellerId: propProduct.seller.id,
@@ -381,28 +479,63 @@ export function ChatWindow({
           const newConvId = res.data.conversation._id;
           setActiveConvId(newConvId);
 
-          // Now send message via REST
           await api.post(`/chat/conversations/${newConvId}/messages`, {
             text: textToSend,
+            attachments,
+            replyTo: optimisticMsg.replyTo?._id,
+            clientMessageId,
           });
 
-          const socket = getSocket();
-          socket.emit("chat:join", { conversationId: newConvId, token });
+          getSocket().emit("chat:join", { conversationId: newConvId, token });
         }
       }
     } catch (err: any) {
       console.error("Failed to send message:", err);
-      // Fallback REST call if socket failed
       if (activeConvId) {
         try {
           await api.post(`/chat/conversations/${activeConvId}/messages`, {
             text: textToSend,
+            attachments,
+            replyTo: optimisticMsg.replyTo?._id,
+            clientMessageId,
           });
-        } catch (restErr: any) {
+        } catch {
           setChatError("Could not deliver message. Please check connection.");
         }
       }
     }
+  };
+
+  const handleDeleteMessage = (msg: ChatMessage) => {
+    if (window.confirm("Do you want to delete this message for everyone?")) {
+      dispatch(deleteMessageThunk({ messageId: msg.id, deleteForEveryone: true }));
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msg.id
+            ? { ...m, isDeleted: true, text: "This message was deleted", message: "This message was deleted", attachments: [] }
+            : m
+        )
+      );
+    }
+  };
+
+  const formatPresence = () => {
+    if (isPartnerTyping) {
+      return <span className="text-[#00A884] font-semibold animate-pulse">typing...</span>;
+    }
+    if (isPartnerOnline) {
+      return <span className="text-[#00A884] font-medium">online</span>;
+    }
+    if (partnerLastSeen) {
+      const d = new Date(partnerLastSeen);
+      return (
+        <span className="text-slate-500">
+          Last seen {d.toLocaleDateString([], { month: "short", day: "numeric" })} at{" "}
+          {d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+      );
+    }
+    return <span className="text-slate-500">Available on DealDoko</span>;
   };
 
   const QUICK_REPLIES = [
@@ -423,7 +556,7 @@ export function ChatWindow({
             <button
               onClick={onBack}
               className="md:hidden p-1.5 -ml-1 text-slate-600 hover:text-slate-900 rounded-full hover:bg-slate-200"
-              title="Back to conversation list"
+              title="Back"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -433,7 +566,7 @@ export function ChatWindow({
           <div className="relative shrink-0">
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border border-slate-200 bg-white">
               <Image
-                src={partner.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"}
+                src={partner.avatar}
                 alt={partner.name}
                 width={44}
                 height={44}
@@ -448,29 +581,17 @@ export function ChatWindow({
             )}
           </div>
 
-          {/* Name & Status */}
+          {/* Name & Online Status / Last Seen */}
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
-                {partner.name}
-              </h3>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">{partner.name}</h3>
               {partner.isVerified && (
                 <span title="Verified Seller">
                   <CheckCircle2 className="w-4 h-4 text-[#0047BA] shrink-0" />
                 </span>
               )}
             </div>
-            <p className="text-[11px] sm:text-xs truncate font-medium">
-              {isPartnerTyping ? (
-                <span className="text-[#00A884] font-semibold animate-pulse">typing...</span>
-              ) : isPartnerOnline ? (
-                <span className="text-[#00A884]">online</span>
-              ) : (
-                <span className="text-slate-500">
-                  {partner.city ? `Seller in ${partner.city}` : "Available on DealDoko"}
-                </span>
-              )}
-            </p>
+            <p className="text-[11px] sm:text-xs truncate font-medium">{formatPresence()}</p>
           </div>
         </div>
 
@@ -516,19 +637,13 @@ export function ChatWindow({
         </div>
       )}
 
-      {/* 2. PRODUCT CONTEXT BANNER (PINNED TO TOP OF CHAT) */}
+      {/* 2. PRODUCT CONTEXT BANNER (PINNED TO TOP) */}
       {adInfo.title && (
-        <div className="bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-3.5 py-2.5 flex items-center justify-between shadow-2xs z-10 shrink-0">
+        <div className="bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-3.5 py-2 flex items-center justify-between shadow-2xs z-10 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             {adInfo.image ? (
               <div className="relative w-11 h-11 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
-                <Image
-                  src={adInfo.image}
-                  alt={adInfo.title}
-                  fill
-                  sizes="44px"
-                  className="object-cover"
-                />
+                <Image src={adInfo.image} alt={adInfo.title} fill sizes="44px" className="object-cover" />
               </div>
             ) : null}
             <div className="min-w-0">
@@ -539,9 +654,7 @@ export function ChatWindow({
                 {adInfo.title}
               </p>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs font-extrabold text-[#0047BA]">
-                  {formatPrice(adInfo.price)}
-                </span>
+                <span className="text-xs font-extrabold text-[#0047BA]">{formatPrice(adInfo.price)}</span>
                 <span className="text-[10px] text-slate-400">• {adInfo.location}</span>
               </div>
             </div>
@@ -562,24 +675,43 @@ export function ChatWindow({
 
       {/* 3. WHATSAPP CHAT STREAM AREA */}
       <div
-        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 relative"
+        ref={messagesContainerRef}
+        onScroll={(e) => {
+          if (e.currentTarget.scrollTop === 0 && hasMore && !isLoadingMore) {
+            handleLoadMore();
+          }
+        }}
+        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 relative"
         style={{
           backgroundImage: `radial-gradient(#CBD5E1 1px, transparent 1px)`,
           backgroundSize: "20px 20px",
           backgroundColor: "#EFEAE2",
         }}
       >
+        {/* Load More Indicator */}
+        {hasMore && (
+          <div className="flex justify-center my-2">
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="text-xs text-slate-600 bg-white/90 hover:bg-white px-3 py-1 rounded-full shadow-2xs border border-slate-200 flex items-center gap-1.5"
+            >
+              {isLoadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00A884]" /> : null}
+              <span>{isLoadingMore ? "Loading earlier messages..." : "Load earlier messages"}</span>
+            </button>
+          </div>
+        )}
+
         {/* Security & Safety WhatsApp Pill */}
         <div className="flex justify-center my-2">
           <div className="bg-[#FFF9C4]/90 text-amber-900 border border-amber-200/80 rounded-lg px-3.5 py-1.5 text-[11px] text-center max-w-md shadow-2xs flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0" />
             <span>
-              🔒 Messages are private &amp; securely exchanged between buyer and seller. Keep payments inside DealDoko!
+              🔒 Messages are private &amp; securely exchanged. Keep payments inside DealDoko!
             </span>
           </div>
         </div>
 
-        {/* Loading Spinner */}
         {isLoadingMessages && (
           <div className="flex justify-center py-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 border border-slate-200 text-xs text-slate-600 shadow-2xs">
@@ -589,19 +721,23 @@ export function ChatWindow({
           </div>
         )}
 
-        {/* Error Alert */}
         {chatError && (
           <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 text-center">
             {chatError}
           </div>
         )}
 
-        {/* Conversation Message History */}
+        {/* Message Stream */}
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble
+            key={message.id || message._id}
+            message={message}
+            onReply={(msg) => dispatch(setReplyingTo(msg))}
+            onDelete={handleDeleteMessage}
+          />
         ))}
 
-        {/* Partner Typing Bubble Animation */}
+        {/* Partner Typing Bubble */}
         {isPartnerTyping && (
           <div className="flex justify-start my-1 px-2">
             <div className="bg-white rounded-2xl rounded-tl-xs px-3.5 py-2.5 shadow-[0_1px_0.5px_rgba(11,20,26,0.12)] border border-slate-100/80 flex items-center gap-1.5">
@@ -618,24 +754,68 @@ export function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 4. QUICK OFFER / NEGOTIATION CHIPS */}
-      <div className="bg-[#F0F2F5]/95 border-t border-slate-200/90 px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+      {/* 4. REPLY PREVIEW BANNER (IF REPLYING) */}
+      {replyingTo && (
+        <div className="bg-white border-t border-slate-200 px-4 py-2 flex items-center justify-between text-xs border-l-4 border-l-[#00A884] shrink-0 animate-in slide-in-from-bottom-2">
+          <div className="min-w-0 pr-2">
+            <span className="font-bold text-[#00A884] block flex items-center gap-1">
+              <Reply className="w-3 h-3" /> Replying to {replyingTo.senderName}
+            </span>
+            <p className="text-slate-600 truncate text-[11.5px] italic">
+              {replyingTo.text || replyingTo.message || "Attachment"}
+            </p>
+          </div>
+          <button
+            onClick={() => dispatch(clearReplyingTo())}
+            className="p-1 text-slate-400 hover:text-slate-700 rounded-full"
+            title="Cancel reply"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* 5. IMAGE PREVIEW (BEFORE SENDING) */}
+      {previewUrl && (
+        <div className="bg-white border-t border-slate-200 px-4 py-2.5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-slate-300">
+              <Image src={previewUrl} alt="Preview" fill className="object-cover" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-800 block truncate max-w-[200px]">
+                {pendingFile?.name}
+              </span>
+              <span className="text-[10px] text-slate-400">Ready to send with message</span>
+            </div>
+          </div>
+          <button
+            onClick={removePendingFile}
+            className="p-1.5 text-slate-400 hover:text-red-600 rounded-full hover:bg-slate-100"
+            title="Remove attachment"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* 6. QUICK OFFER CHIPS */}
+      <div className="bg-[#F0F2F5]/95 border-t border-slate-200/90 px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
         <span className="text-[10px] font-bold uppercase text-slate-500 shrink-0 flex items-center gap-1 mr-1">
-          <Sparkles className="w-3 h-3 text-[#FF6A00]" />
-          Quick:
+          <Sparkles className="w-3 h-3 text-[#FF6A00]" /> Quick:
         </span>
         {QUICK_REPLIES.map((reply, i) => (
           <button
             key={i}
             onClick={() => handleSendMessage(reply)}
-            className="text-xs bg-white hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full border border-slate-300/80 shrink-0 transition-colors shadow-2xs hover:border-slate-400 font-medium"
+            className="text-xs bg-white hover:bg-slate-100 text-slate-700 px-3 py-1 rounded-full border border-slate-300/80 shrink-0 transition-colors shadow-2xs font-medium"
           >
             {reply}
           </button>
         ))}
       </div>
 
-      {/* Emoji Picker Row if toggled */}
+      {/* Emoji Picker Row */}
       {showEmojis && (
         <div className="bg-white border-t border-slate-200 px-3 py-2 flex items-center gap-2 overflow-x-auto shrink-0 shadow-xs">
           {EMOJI_LIST.map((emoji, idx) => (
@@ -654,7 +834,7 @@ export function ChatWindow({
         </div>
       )}
 
-      {/* 5. WHATSAPP INPUT TOOLBAR */}
+      {/* 7. WHATSAPP INPUT TOOLBAR */}
       <div className="bg-[#F0F2F5] p-2.5 sm:p-3 border-t border-slate-300/80 flex items-center gap-2 shrink-0">
         {/* Emoji Button */}
         <button
@@ -666,7 +846,25 @@ export function ChatWindow({
           <Smile className="w-5 h-5" />
         </button>
 
-        {/* Input Text Field */}
+        {/* Paperclip Attachment Button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-200/70 rounded-full transition-colors shrink-0"
+          title="Attach Image or Document"
+        >
+          <Paperclip className="w-5 h-5" />
+        </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,.pdf"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        {/* Text Input Field */}
         <div className="flex-1 relative">
           <input
             type="text"
@@ -678,7 +876,7 @@ export function ChatWindow({
                 handleSendMessage();
               }
             }}
-            placeholder="Type a message..."
+            placeholder={pendingFile ? "Add a caption..." : "Type a message..."}
             className="w-full bg-white text-slate-900 text-sm rounded-full py-2.5 px-4 outline-none border border-transparent focus:border-slate-300 placeholder:text-slate-400 shadow-2xs transition-all"
           />
         </div>
@@ -687,15 +885,19 @@ export function ChatWindow({
         <button
           type="button"
           onClick={() => handleSendMessage()}
-          disabled={!inputText.trim()}
+          disabled={(!inputText.trim() && !pendingFile) || isUploading}
           className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all shadow-xs ${
-            inputText.trim()
+            (inputText.trim() || pendingFile) && !isUploading
               ? "bg-[#00A884] hover:bg-[#008f6f] text-white cursor-pointer transform active:scale-95"
               : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
           }`}
           title="Send message"
         >
-          <Send className="w-4 h-4 translate-x-0.5" />
+          {isUploading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+          ) : (
+            <Send className="w-4 h-4 translate-x-0.5" />
+          )}
         </button>
       </div>
     </div>
