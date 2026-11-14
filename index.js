@@ -14,6 +14,7 @@ import advertisementRoutes from "./routes/advertisementRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import bannerRoutes from "./routes/bannerRoutes.js";
 
 dotenv.config();
 
@@ -70,6 +71,7 @@ app.use("/api/advertisements", advertisementRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/banners", bannerRoutes);
 
 // 404 Handler
 app.use((req, res) => {
