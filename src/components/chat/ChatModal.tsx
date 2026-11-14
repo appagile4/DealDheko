@@ -18,7 +18,7 @@ export function ChatModal() {
       hideCloseButton
       noPadding
     >
-      <div className="h-[640px] max-h-[88vh] flex flex-col">
+      <div className="h-[640px] max-h-[88vh] flex flex-col min-h-0">
         <ChatWindow product={activeChatProduct} onClose={closeChat} />
       </div>
     </Modal>

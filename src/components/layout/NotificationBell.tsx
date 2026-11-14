@@ -97,14 +97,32 @@ export function NotificationBell() {
       setUnreadCount((prev) => prev + 1);
     };
 
+    const handleChatAlert = (data: any) => {
+      const isChatPage = typeof window !== "undefined" && window.location.pathname === "/chat";
+      if (!isChatPage) {
+        const newNotif: AppNotification = {
+          _id: `chat-${data.message?._id || Date.now()}`,
+          type: "chat_message",
+          title: `Message from ${data.senderName || "Seller"}`,
+          message: data.message?.text || data.message?.message || "Sent you a message",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        };
+        setNotifications((prev) => [newNotif, ...prev]);
+        setUnreadCount((prev) => prev + 1);
+      }
+    };
+
     socket.on("notification:new", handleNewNotification);
     socket.on("ad:approved", handleAdApproved);
     socket.on("ad:rejected", handleAdRejected);
+    socket.on("chat:new_message_alert", handleChatAlert);
 
     return () => {
       socket.off("notification:new", handleNewNotification);
       socket.off("ad:approved", handleAdApproved);
       socket.off("ad:rejected", handleAdRejected);
+      socket.off("chat:new_message_alert", handleChatAlert);
     };
   }, [user]);
 
@@ -235,6 +253,16 @@ export function NotificationBell() {
                             onClick={() => setIsOpen(false)}
                           >
                             <span>View Ad</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </Link>
+                        )}
+                        {isChat && (
+                          <Link
+                            href="/chat"
+                            className="text-[#00A884] font-bold hover:underline flex items-center gap-0.5"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            <span>Open Chat</span>
                             <ExternalLink className="w-2.5 h-2.5" />
                           </Link>
                         )}

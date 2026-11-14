@@ -10,6 +10,7 @@ import { MobileNavigation } from "@/components/layout/MobileNavigation";
 import { LocationModal } from "@/components/layout/LocationModal";
 import { AuthModal } from "@/components/layout/AuthModal";
 import { ChatModal } from "@/components/chat/ChatModal";
+import { ChatNotificationToast } from "@/components/chat/ChatNotificationToast";
 
 export function AppLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -44,10 +45,11 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
       {/* Mobile Bottom Navigation Bar */}
       <MobileNavigation />
 
-      {/* Global Modals */}
+      {/* Global Modals & Notifications */}
       <LocationModal />
       <AuthModal />
       <ChatModal />
+      <ChatNotificationToast />
     </MarketplaceProvider>
   );
 }

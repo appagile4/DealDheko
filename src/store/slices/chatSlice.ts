@@ -180,6 +180,35 @@ const chatSlice = createSlice({
 
         state.conversations.splice(convIdx, 1);
         state.conversations.unshift(updated);
+      } else {
+        // Conversation doesn't exist in state list yet, create a conversation card
+        const sender = (msg as any).sender;
+        const senderName = typeof sender === "object" ? sender?.name : (msg as any).senderName || "New Chat";
+        const senderAvatar = typeof sender === "object" ? sender?.avatar : "";
+
+        state.conversations.unshift({
+          id: convId,
+          _id: convId,
+          productId: "",
+          productTitle: "Classified Inquiry",
+          productPrice: 0,
+          productImage: "",
+          buyerId: "",
+          sellerId: typeof sender === "object" ? (sender?._id || "") : (sender || ""),
+          sellerName: senderName,
+          sellerAvatar: senderAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+          lastMessage: msg.text || msg.message || "",
+          lastMessageTime: msg.timestamp || new Date().toISOString(),
+          unreadCount: state.activeConversationId !== convId && !msg.isMe ? 1 : 0,
+          updatedAt: msg.createdAt || new Date().toISOString(),
+        });
+      }
+    },
+    markConversationReadLocally(state, action: PayloadAction<string>) {
+      const convId = action.payload;
+      const conv = state.conversations.find((c) => c.id === convId || c._id === convId);
+      if (conv) {
+        conv.unreadCount = 0;
       }
     },
     updateMessageStatus(
@@ -349,6 +378,10 @@ export const {
   updateMessageStatus,
   setTypingStatus,
   setUserPresence,
+  markConversationReadLocally,
 } = chatSlice.actions;
+
+export const selectTotalUnreadCount = (state: { chat: ChatState }) =>
+  state.chat.conversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
 
 export default chatSlice.reducer;

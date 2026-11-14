@@ -4,11 +4,14 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMarketplace } from "@/context/MarketplaceContext";
+import { useAppSelector } from "@/store";
+import { selectTotalUnreadCount } from "@/store/slices/chatSlice";
 import { Home, Heart, Plus, MessageSquare, User } from "lucide-react";
 
 export function MobileNavigation() {
   const pathname = usePathname();
   const { wishlistCount, user, openAuthModal } = useMarketplace();
+  const totalUnreadChats = useAppSelector(selectTotalUnreadCount);
 
   const isHome = pathname === "/";
   const isWishlist = pathname === "/wishlist";
@@ -62,11 +65,18 @@ export function MobileNavigation() {
         {/* Chat */}
         <Link
           href="/chat"
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+          className={`relative flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
             isChat ? "text-[#0047BA] font-bold" : "text-slate-500"
           }`}
         >
-          <MessageSquare className="w-5 h-5" />
+          <div className="relative">
+            <MessageSquare className="w-5 h-5" />
+            {totalUnreadChats > 0 && (
+              <span className="absolute -top-1.5 -right-2 min-w-3.5 h-3.5 px-0.5 bg-[#25D366] text-white rounded-full text-[9px] font-black flex items-center justify-center shadow-xs">
+                {totalUnreadChats > 99 ? "99+" : totalUnreadChats}
+              </span>
+            )}
+          </div>
           <span className="text-[10px] mt-0.5">Chat</span>
         </Link>
 

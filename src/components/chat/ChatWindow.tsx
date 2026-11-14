@@ -16,6 +16,8 @@ import {
   clearReplyingTo,
   uploadAttachment,
   deleteMessageThunk,
+  setActiveConversation,
+  markConversationReadLocally,
 } from "@/store/slices/chatSlice";
 import {
   Send,
@@ -30,6 +32,7 @@ import {
   X,
   Loader2,
   Reply,
+  ChevronDown,
 } from "lucide-react";
 
 interface ChatWindowProps {
@@ -133,12 +136,44 @@ export function ChatWindow({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
+  const [newMessagesWhileScrolledUp, setNewMessagesWhileScrolledUp] = useState(0);
+
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isSendingRef = useRef(false);
   const isInitialLoadRef = useRef(true);
+
+  // Synchronize active conversation with Redux store to mark messages as read
+  useEffect(() => {
+    if (activeConvId) {
+      dispatch(setActiveConversation(activeConvId));
+      dispatch(markConversationReadLocally(activeConvId));
+    }
+    return () => {
+      dispatch(setActiveConversation(null));
+    };
+  }, [activeConvId, dispatch]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const atBottom = distanceFromBottom < 80;
+
+    setIsAtBottom(atBottom);
+    setShowScrollBottomBtn(!atBottom);
+
+    if (atBottom) {
+      setNewMessagesWhileScrolledUp(0);
+    }
+
+    if (scrollTop === 0 && hasMore && !isLoadingMore) {
+      handleLoadMore();
+    }
+  };
 
   // Robust Auto-Scroll to Bottom on Message Receive / Send / Page Refresh (Container-Only, Never Scrolls Window)
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
@@ -377,6 +412,14 @@ export function ChatWindow({
         socket.emit("message:delivered", { messageId: msg._id || msg.id, conversationId: activeConvId });
         socket.emit("chat:read", { conversationId: activeConvId, token });
         setIsPartnerTyping(false);
+
+        if (!isAtBottom) {
+          setNewMessagesWhileScrolledUp((prev) => prev + 1);
+        } else {
+          setTimeout(() => scrollToBottom("smooth"), 50);
+        }
+      } else {
+        setTimeout(() => scrollToBottom("smooth"), 50);
       }
     };
 
@@ -441,16 +484,17 @@ export function ChatWindow({
     };
   }, [activeConvId, partner.id, user]);
 
-  // Auto-scroll to bottom on initial load, refresh, new messages, or partner typing
+  // Auto-scroll to bottom on initial load, refresh, or when new message arrives (respecting scroll position)
   useEffect(() => {
     if (messages.length > 0) {
-      // Use instant 'auto' on initial load/refresh for seamless zero-flicker positioning, smooth thereafter
-      scrollToBottom(isInitialLoadRef.current ? "auto" : "smooth");
       if (isInitialLoadRef.current) {
+        scrollToBottom("auto");
         isInitialLoadRef.current = false;
+      } else if (isAtBottom) {
+        scrollToBottom("smooth");
       }
     }
-  }, [messages, isLoadingMessages, isPartnerTyping]);
+  }, [messages.length, isAtBottom]);
 
   // Reset initial load flag whenever active conversation changes
   useEffect(() => {
@@ -600,6 +644,9 @@ export function ChatWindow({
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
+    setIsAtBottom(true);
+    setShowScrollBottomBtn(false);
+    setNewMessagesWhileScrolledUp(0);
     scrollToBottom("auto");
     if (onNewMessageSent && activeConvId) {
       onNewMessageSent(activeConvId, textToSend || "Photo");
@@ -831,12 +878,8 @@ export function ChatWindow({
       {/* 3. WHATSAPP CHAT STREAM AREA */}
       <div
         ref={messagesContainerRef}
-        onScroll={(e) => {
-          if (e.currentTarget.scrollTop === 0 && hasMore && !isLoadingMore) {
-            handleLoadMore();
-          }
-        }}
-        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-1 relative"
+        onScroll={handleScroll}
+        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-1 relative whatsapp-scrollbar overscroll-contain"
         style={{
           backgroundImage: `radial-gradient(#CBD5E1 1px, transparent 1px)`,
           backgroundSize: "20px 20px",
@@ -904,6 +947,28 @@ export function ChatWindow({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Floating WhatsApp Scroll-to-Bottom Button */}
+        {showScrollBottomBtn && (
+          <button
+            type="button"
+            onClick={() => {
+              scrollToBottom("smooth");
+              setIsAtBottom(true);
+              setShowScrollBottomBtn(false);
+              setNewMessagesWhileScrolledUp(0);
+            }}
+            className="sticky bottom-3 float-right mr-1 z-30 w-10 h-10 rounded-full bg-white text-slate-700 shadow-xl border border-slate-300 flex items-center justify-center hover:bg-slate-50 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
+            title="Scroll to bottom"
+          >
+            <ChevronDown className="w-5 h-5 text-slate-700" />
+            {newMessagesWhileScrolledUp > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-[#25D366] text-white text-[10px] font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center shadow-xs animate-pulse">
+                {newMessagesWhileScrolledUp}
+              </span>
+            )}
+          </button>
         )}
 
         <div ref={messagesEndRef} />

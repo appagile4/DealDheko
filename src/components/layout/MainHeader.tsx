@@ -8,6 +8,8 @@ import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/common/Button";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { useMarketplace } from "@/context/MarketplaceContext";
+import { useAppSelector } from "@/store";
+import { selectTotalUnreadCount } from "@/store/slices/chatSlice";
 import {
   MapPin,
   Search,
@@ -35,6 +37,8 @@ export function MainHeader() {
     recentSearches,
     addRecentSearch,
   } = useMarketplace();
+
+  const totalUnreadChats = useAppSelector(selectTotalUnreadCount);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -257,6 +261,11 @@ export function MainHeader() {
               title="Messages / Chat"
             >
               <MessageSquare className="w-5 h-5" />
+              {totalUnreadChats > 0 && (
+                <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-[#25D366] text-white rounded-full text-[10px] font-black flex items-center justify-center animate-pulse shadow-xs">
+                  {totalUnreadChats > 99 ? "99+" : totalUnreadChats}
+                </span>
+              )}
             </Link>
 
             {/* Real-time Notification Bell */}
