@@ -9,6 +9,16 @@ const conversationSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    buyer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
     advertisement: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Advertisement",
@@ -16,6 +26,10 @@ const conversationSchema = new mongoose.Schema(
       index: true,
     },
     lastMessage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+    },
+    lastMessageText: {
       type: String,
       default: "",
     },
@@ -33,6 +47,16 @@ const conversationSchema = new mongoose.Schema(
       of: Number,
       default: {},
     },
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
+    archivedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   {
     timestamps: true,
@@ -40,6 +64,7 @@ const conversationSchema = new mongoose.Schema(
 );
 
 conversationSchema.index({ participants: 1, lastMessageAt: -1 });
+conversationSchema.index({ advertisement: 1, buyer: 1, seller: 1 });
 
 const Conversation = mongoose.model("Conversation", conversationSchema);
 
