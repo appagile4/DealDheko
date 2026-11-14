@@ -1,39 +1,36 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Clock,
   CheckCircle2,
   XCircle,
-  FileText,
+  Clock,
   Users,
-  ShieldCheck,
-  LogOut,
-  ChevronRight,
-  Menu,
-  X,
   Search,
   Filter,
   Eye,
   Check,
-  AlertTriangle,
-  RotateCw,
+  X,
   Star,
+  LogOut,
+  RotateCw,
+  AlertTriangle,
   MapPin,
-  Calendar,
+  Menu,
+  FileText,
   User as UserIcon,
   Phone,
   Mail,
-  SlidersHorizontal,
   ExternalLink,
   Shield,
   History,
+  ShieldCheck,
 } from "lucide-react";
 
 interface AdminStats {
@@ -110,8 +107,9 @@ export default function SuperadminDashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
-  // Data States
+  // Stats State
   const [stats, setStats] = useState<AdminStats>({
     totalAds: 0,
     pendingAds: 0,
@@ -119,54 +117,54 @@ export default function SuperadminDashboardPage() {
     rejectedAds: 0,
     totalUsers: 0,
   });
+
+  // Data Collections
   const [advertisements, setAdvertisements] = useState<AdvertisementItem[]>([]);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
 
-  // Action Feedback & Modal States
+  // Detailed Review Modal State
   const [reviewAd, setReviewAd] = useState<AdvertisementItem | null>(null);
   const [activeReviewImg, setActiveReviewImg] = useState<number>(0);
+
+  // Reject with Reason Modal State
   const [rejectionModalAd, setRejectionModalAd] = useState<AdvertisementItem | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
-  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
-  // Show temporary toast feedback
   const showToast = (msg: string) => {
     setActionSuccessMessage(msg);
     setTimeout(() => setActionSuccessMessage(null), 4000);
   };
 
-  // Fetch Dashboard Statistics
+  // Fetch Dashboard Stats
   const fetchStats = useCallback(async () => {
     try {
       const res = await api.get("/admin/stats");
       if (res.data.success) {
         setStats(res.data.stats);
       }
-    } catch {
-      // ignore
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        router.push("/admin");
+      }
     }
-  }, []);
+  }, [router]);
 
-  // Fetch Advertisements based on active tab
+  // Fetch Advertisements
   const fetchAdvertisements = useCallback(async () => {
     setIsLoading(true);
     try {
-      const statusParam =
-        activeTab === "pending"
-          ? "pending"
-          : activeTab === "approved"
-          ? "approved"
-          : activeTab === "rejected"
-          ? "rejected"
-          : "all";
+      let statusQuery = "";
+      if (activeTab === "pending") statusQuery = "pending";
+      else if (activeTab === "approved") statusQuery = "approved";
+      else if (activeTab === "rejected") statusQuery = "rejected";
+      else if (activeTab === "all" || activeTab === "dashboard") statusQuery = "all";
 
       const res = await api.get("/admin/advertisements", {
         params: {
-          status: statusParam,
+          status: statusQuery,
           search: searchTerm || undefined,
-          limit: 50,
         },
       });
 
@@ -254,16 +252,14 @@ export default function SuperadminDashboardPage() {
   // Open Rejection Dialog
   const openRejectDialog = (ad: AdvertisementItem) => {
     setRejectionModalAd(ad);
-    setRejectionReasonInput(
-      "Inappropriate content or pricing details require verification. Please update your photos and description."
-    );
+    setRejectionReasonInput("");
   };
 
   // Confirm Rejection handler
   const handleConfirmReject = async () => {
     if (!rejectionModalAd) return;
     if (!rejectionReasonInput.trim()) {
-      alert("Please provide a rejection reason for the seller.");
+      alert("Please provide a rejection reason so the seller knows how to fix their advertisement.");
       return;
     }
 
@@ -272,8 +268,9 @@ export default function SuperadminDashboardPage() {
       const res = await api.put(`/admin/advertisements/${rejectionModalAd._id}/reject`, {
         reason: rejectionReasonInput.trim(),
       });
+
       if (res.data.success) {
-        showToast("Advertisement rejected. Seller has received real-time feedback.");
+        showToast("Advertisement rejected and seller notified with reason.");
         setRejectionModalAd(null);
         setReviewAd(null);
         fetchStats();
@@ -324,52 +321,57 @@ export default function SuperadminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-900 text-slate-100 flex flex-col">
-      {/* Top Admin Header Bar */}
-      <header className="h-16 bg-slate-950/80 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 backdrop-blur-md">
+    <div className="min-h-screen w-full bg-[#F8FAFC] text-slate-900 flex flex-col font-sans select-none">
+      {/* Top Admin Header Bar (White Brand Theme) */}
+      <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsSidebarOpen((prev) => !prev)}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Toggle Sidebar"
           >
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0047BA] to-blue-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-              <Shield className="w-4 h-4 stroke-[2.5]" />
-            </div>
-            <div>
-              <h1 className="text-sm font-black text-white tracking-wide flex items-center gap-2">
-                <span>DealDoko</span>
-                <span className="text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded">
-                  SUPERADMIN
-                </span>
-              </h1>
-            </div>
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image
+              src="/dealdoko-logo.png"
+              alt="DealDoko"
+              width={140}
+              height={48}
+              priority
+              className="h-9 w-auto object-contain"
+            />
+          </Link>
+
+          <span className="h-5 w-px bg-slate-200 hidden sm:block" />
+
+          <div className="hidden sm:flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-[#0047BA] text-xs font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#0047BA]" />
+            <span>Superadmin Console</span>
           </div>
         </div>
 
         {/* Right Admin Profile & Status */}
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>MongoDB &amp; Socket.IO Live</span>
           </div>
 
           <Link
             href="/"
             target="_blank"
-            className="hidden md:flex items-center gap-1.5 text-xs text-slate-300 hover:text-white font-semibold transition-colors"
+            className="hidden md:flex items-center gap-1.5 text-xs text-slate-600 hover:text-[#0047BA] font-bold transition-colors px-3 py-1.5 rounded-xl hover:bg-slate-100"
           >
-            <span>View Marketplace</span>
+            <span>Public Marketplace</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </Link>
 
           <button
             onClick={handleLogout}
             title="Sign out of Superadmin"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 text-xs font-bold text-slate-300 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-xs font-bold text-slate-700 border border-slate-200 transition-all cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Logout</span>
@@ -379,29 +381,29 @@ export default function SuperadminDashboardPage() {
 
       {/* Main Container */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Collapsible Sidebar */}
+        {/* Collapsible Sidebar (Clean White Theme) */}
         <aside
           className={`${
             isSidebarOpen ? "w-64" : "w-16"
-          } transition-all duration-200 bg-slate-950/60 border-r border-slate-800 shrink-0 flex flex-col justify-between py-4 select-none`}
+          } transition-all duration-200 bg-white border-r border-slate-200 shrink-0 flex flex-col justify-between py-4 select-none shadow-xs`}
         >
           {/* Navigation Items */}
           <nav className="space-y-1 px-2">
             {[
-              { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+              { id: "dashboard", label: "Dashboard Overview", icon: LayoutDashboard },
               {
                 id: "pending",
                 label: "Pending Approvals",
                 icon: Clock,
                 badge: stats.pendingAds,
-                badgeColor: "bg-amber-500 text-slate-950",
+                badgeColor: "bg-[#FF6A00] text-white",
               },
               {
                 id: "approved",
                 label: "Approved Live Ads",
                 icon: CheckCircle2,
                 badge: stats.approvedAds,
-                badgeColor: "bg-emerald-500/20 text-emerald-400",
+                badgeColor: "bg-emerald-100 text-emerald-800",
               },
               { id: "rejected", label: "Rejected Ads", icon: XCircle },
               { id: "all", label: "All Advertisements", icon: FileText },
@@ -410,7 +412,7 @@ export default function SuperadminDashboardPage() {
                 label: "User Management",
                 icon: Users,
                 badge: stats.totalUsers,
-                badgeColor: "bg-blue-500/20 text-blue-400",
+                badgeColor: "bg-blue-100 text-[#0047BA]",
               },
               { id: "audit", label: "Audit Logs", icon: History },
             ].map((item) => {
@@ -426,19 +428,19 @@ export default function SuperadminDashboardPage() {
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     isActive
-                      ? "bg-[#0047BA] text-white shadow-md shadow-blue-600/20"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                      ? "bg-[#0047BA] text-white shadow-md shadow-[#0047BA]/20"
+                      : "text-slate-600 hover:text-[#0047BA] hover:bg-blue-50/50"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 truncate">
                     <Icon className="w-4 h-4 shrink-0" />
-                    {isSidebarOpen && <span>{item.label}</span>}
+                    {isSidebarOpen && <span className="truncate">{item.label}</span>}
                   </div>
 
                   {isSidebarOpen && item.badge !== undefined && (
                     <span
                       className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                        item.badgeColor || "bg-slate-800 text-slate-300"
+                        item.badgeColor || "bg-slate-100 text-slate-700"
                       }`}
                     >
                       {item.badge}
@@ -451,101 +453,104 @@ export default function SuperadminDashboardPage() {
 
           {/* Sidebar Footer info */}
           {isSidebarOpen && (
-            <div className="px-4 py-3 border-t border-slate-800/80 text-[11px] text-slate-500">
-              <p className="font-semibold text-slate-400">DealDheko Core v1.0</p>
-              <p>Himalayan Cloud Platform</p>
+            <div className="px-4 py-3 border-t border-slate-100 text-[11px] text-slate-400">
+              <p className="font-bold text-slate-700 flex items-center gap-1">
+                <span>DealDoko</span>
+                <span className="text-[#FF6A00]">Marketplace</span>
+              </p>
+              <p>2026 Admin Portal v1.0</p>
             </div>
           )}
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6 bg-[#F8FAFC]">
           {/* Notification Toast */}
           {actionSuccessMessage && (
-            <div className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold px-4 py-3 rounded-2xl flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2">
+            <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold px-4 py-3 rounded-2xl flex items-center justify-between shadow-md animate-in fade-in slide-in-from-top-2">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{actionSuccessMessage}</span>
               </div>
               <button
                 onClick={() => setActionSuccessMessage(null)}
-                className="text-emerald-400 hover:text-white cursor-pointer"
+                className="text-emerald-700 hover:text-emerald-900 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           )}
 
-          {/* Section A: Statistics Cards */}
+          {/* Section A: Statistics Cards (White Brand Theme) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             {/* Total Ads */}
-            <div className="bg-slate-800/60 border border-slate-800 rounded-2xl p-4 space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1 shadow-xs hover:border-blue-300 transition-colors">
+              <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
                 Total Ads
               </span>
-              <p className="text-2xl font-black text-white">{stats.totalAds}</p>
+              <p className="text-2xl font-black text-slate-900">{stats.totalAds}</p>
               <span className="text-[10px] text-slate-500">All submissions</span>
             </div>
 
-            {/* Pending Approvals (Mandatory Stage) */}
+            {/* Pending Approvals (Mandatory Stage - Doko Orange Highlight) */}
             <div
               onClick={() => setActiveTab("pending")}
-              className="bg-amber-500/10 border border-amber-500/30 hover:border-amber-500/60 rounded-2xl p-4 space-y-1 cursor-pointer transition-colors"
+              className="bg-orange-50/70 border-2 border-[#FF6A00]/40 hover:border-[#FF6A00] rounded-2xl p-4 space-y-1 cursor-pointer transition-all shadow-xs"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+                <span className="text-[11px] font-extrabold text-[#FF6A00] uppercase tracking-wider">
                   Pending Review
                 </span>
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FF6A00] animate-ping" />
               </div>
-              <p className="text-2xl font-black text-amber-400">{stats.pendingAds}</p>
-              <span className="text-[10px] text-amber-300/80">Requires your approval →</span>
+              <p className="text-2xl font-black text-[#FF6A00]">{stats.pendingAds}</p>
+              <span className="text-[10px] text-orange-700 font-bold">Requires approval →</span>
             </div>
 
             {/* Approved Live */}
             <div
               onClick={() => setActiveTab("approved")}
-              className="bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/60 rounded-2xl p-4 space-y-1 cursor-pointer transition-colors"
+              className="bg-white border border-slate-200 hover:border-emerald-300 rounded-2xl p-4 space-y-1 cursor-pointer transition-colors shadow-xs"
             >
-              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+              <span className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-wider">
                 Approved Live
               </span>
-              <p className="text-2xl font-black text-emerald-400">{stats.approvedAds}</p>
-              <span className="text-[10px] text-emerald-300/80">Publicly visible</span>
+              <p className="text-2xl font-black text-emerald-700">{stats.approvedAds}</p>
+              <span className="text-[10px] text-slate-500">Visible on marketplace</span>
             </div>
 
             {/* Rejected */}
             <div
               onClick={() => setActiveTab("rejected")}
-              className="bg-rose-500/10 border border-rose-500/30 hover:border-rose-500/60 rounded-2xl p-4 space-y-1 cursor-pointer transition-colors"
+              className="bg-white border border-slate-200 hover:border-rose-300 rounded-2xl p-4 space-y-1 cursor-pointer transition-colors shadow-xs"
             >
-              <span className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">
+              <span className="text-[11px] font-extrabold text-rose-600 uppercase tracking-wider">
                 Rejected
               </span>
-              <p className="text-2xl font-black text-rose-400">{stats.rejectedAds}</p>
-              <span className="text-[10px] text-rose-300/80">Awaiting seller resubmit</span>
+              <p className="text-2xl font-black text-rose-600">{stats.rejectedAds}</p>
+              <span className="text-[10px] text-slate-500">Awaiting edit &amp; resubmit</span>
             </div>
 
             {/* Registered Users */}
             <div
               onClick={() => setActiveTab("users")}
-              className="bg-blue-500/10 border border-blue-500/30 hover:border-blue-500/60 rounded-2xl p-4 space-y-1 cursor-pointer transition-colors"
+              className="bg-white border border-slate-200 hover:border-[#0047BA] rounded-2xl p-4 space-y-1 cursor-pointer transition-colors shadow-xs"
             >
-              <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider">
+              <span className="text-[11px] font-extrabold text-[#0047BA] uppercase tracking-wider">
                 Total Users
               </span>
-              <p className="text-2xl font-black text-blue-400">{stats.totalUsers}</p>
-              <span className="text-[10px] text-blue-300/80">Registered sellers &amp; buyers</span>
+              <p className="text-2xl font-black text-[#0047BA]">{stats.totalUsers}</p>
+              <span className="text-[10px] text-slate-500">Sellers &amp; buyers</span>
             </div>
           </div>
 
-          {/* Section B: Tab Specific Controls (Search & Refresh) */}
+          {/* Section B: Search & Refresh Control Bar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
             <div>
-              <h2 className="text-lg font-black text-white capitalize flex items-center gap-2">
+              <h2 className="text-lg font-black text-slate-900 capitalize flex items-center gap-2">
                 <span>
                   {activeTab === "pending"
-                    ? "Pending Advertisements (Awaiting Approval)"
+                    ? "Pending Advertisements (Awaiting Superadmin Approval)"
                     : activeTab === "approved"
                     ? "Approved Live Advertisements"
                     : activeTab === "rejected"
@@ -557,10 +562,10 @@ export default function SuperadminDashboardPage() {
                     : "Marketplace Advertisements Registry"}
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 {activeTab === "pending"
-                  ? "Carefully review product images and seller details before publishing to public marketplace."
-                  : "Live data directly synchronized with MongoDB Atlas."}
+                  ? "Carefully review product photos and description before approving for public display."
+                  : "Live data directly synchronized with MongoDB Atlas cluster."}
               </p>
             </div>
 
@@ -569,10 +574,10 @@ export default function SuperadminDashboardPage() {
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search by title, seller, city..."
+                  placeholder="Search title, seller, city..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0047BA] focus:ring-1 focus:ring-[#0047BA] transition-colors shadow-xs"
                 />
               </div>
 
@@ -584,9 +589,9 @@ export default function SuperadminDashboardPage() {
                   else fetchAdvertisements();
                 }}
                 title="Refresh from MongoDB"
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition-colors cursor-pointer shadow-xs"
               >
-                <RotateCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                <RotateCw className={`w-4 h-4 ${isLoading ? "animate-spin text-[#00A896]" : ""}`} />
               </button>
             </div>
           </div>
@@ -594,10 +599,10 @@ export default function SuperadminDashboardPage() {
           {/* Section C: Tab Contents */}
           {activeTab === "users" ? (
             /* Users Table */
-            <div className="bg-slate-800/40 border border-slate-800 rounded-3xl overflow-hidden shadow-xs">
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/60 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
                     <tr>
                       <th className="py-3 px-4">User</th>
                       <th className="py-3 px-4">Contact</th>
@@ -608,12 +613,12 @@ export default function SuperadminDashboardPage() {
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-slate-100 text-slate-800">
                     {users.map((u) => (
-                      <tr key={u._id} className="hover:bg-slate-800/40 transition-colors">
+                      <tr key={u._id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-700 border border-slate-600 shrink-0">
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                               <Image
                                 src={
                                   u.avatar ||
@@ -626,7 +631,7 @@ export default function SuperadminDashboardPage() {
                               />
                             </div>
                             <div>
-                              <p className="font-bold text-white">{u.name}</p>
+                              <p className="font-bold text-slate-900">{u.name}</p>
                               <p className="text-[10px] text-slate-400">
                                 Joined {new Date(u.createdAt).toLocaleDateString()}
                               </p>
@@ -634,28 +639,28 @@ export default function SuperadminDashboardPage() {
                           </div>
                         </td>
                         <td className="py-3 px-4 font-mono text-[11px]">
-                          <div>{u.email}</div>
-                          <div className="text-slate-400">{u.phone}</div>
+                          <div className="text-slate-900">{u.email}</div>
+                          <div className="text-slate-500">{u.phone}</div>
                         </td>
                         <td className="py-3 px-4">{u.city || "Kathmandu"}</td>
                         <td className="py-3 px-4">
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
                               u.role === "superadmin"
-                                ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                                : "bg-slate-700 text-slate-300"
+                                ? "bg-blue-50 text-[#0047BA] border border-blue-200"
+                                : "bg-slate-100 text-slate-700"
                             }`}
                           >
                             {u.role}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-bold text-white">{u.adCount} ads</td>
+                        <td className="py-3 px-4 font-bold text-slate-900">{u.adCount} ads</td>
                         <td className="py-3 px-4">
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                               u.isSuspended || u.status === "suspended"
-                                ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                                : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             }`}
                           >
                             {u.isSuspended || u.status === "suspended" ? "Suspended" : "Active"}
@@ -667,8 +672,8 @@ export default function SuperadminDashboardPage() {
                               onClick={() => handleToggleUserStatus(u._id)}
                               className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
                                 u.isSuspended
-                                  ? "bg-emerald-600 hover:bg-emerald-500 text-white"
-                                  : "bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white"
+                                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  : "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
                               }`}
                             >
                               {u.isSuspended ? "Re-activate" : "Suspend"}
@@ -683,10 +688,10 @@ export default function SuperadminDashboardPage() {
             </div>
           ) : activeTab === "audit" ? (
             /* Audit Logs Table */
-            <div className="bg-slate-800/40 border border-slate-800 rounded-3xl overflow-hidden shadow-xs">
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/60 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
                     <tr>
                       <th className="py-3 px-4">Timestamp</th>
                       <th className="py-3 px-4">Administrator</th>
@@ -695,39 +700,39 @@ export default function SuperadminDashboardPage() {
                       <th className="py-3 px-4">Summary</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-slate-100 text-slate-800">
                     {auditLogs.map((log) => (
-                      <tr key={log._id} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
+                      <tr key={log._id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
                           {new Date(log.createdAt).toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 font-bold text-white">
+                        <td className="py-3 px-4 font-bold text-slate-900">
                           {log.admin?.name || "Superadmin"}
                         </td>
                         <td className="py-3 px-4">
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
                               log.action === "ad_approved"
-                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 : log.action === "ad_rejected"
-                                ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                                : "bg-blue-500/20 text-blue-400"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-blue-50 text-[#0047BA] border border-blue-200"
                             }`}
                           >
                             {log.action}
                           </span>
                         </td>
-                        <td className="py-3 px-4 uppercase text-[10px] font-semibold text-slate-400">
+                        <td className="py-3 px-4 uppercase text-[10px] font-bold text-slate-500">
                           {log.targetType}
                         </td>
-                        <td className="py-3 px-4 text-xs text-slate-300">
+                        <td className="py-3 px-4 text-xs text-slate-700">
                           {log.metadata?.title || JSON.stringify(log.metadata || {})}
                         </td>
                       </tr>
                     ))}
                     {auditLogs.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-500">
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
                           No audit log entries recorded yet.
                         </td>
                       </tr>
@@ -737,11 +742,11 @@ export default function SuperadminDashboardPage() {
               </div>
             </div>
           ) : (
-            /* Advertisements Table / Cards */
-            <div className="bg-slate-800/40 border border-slate-800 rounded-3xl overflow-hidden shadow-xs">
+            /* Advertisements Table */
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/60 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
                     <tr>
                       <th className="py-3 px-4">Thumbnail</th>
                       <th className="py-3 px-4">Title &amp; Category</th>
@@ -753,17 +758,17 @@ export default function SuperadminDashboardPage() {
                       <th className="py-3 px-4 text-right">Moderation Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-slate-100 text-slate-800">
                     {advertisements.map((ad) => {
                       const coverImg =
                         ad.images[0]?.url ||
                         "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80";
 
                       return (
-                        <tr key={ad._id} className="hover:bg-slate-800/40 transition-colors">
+                        <tr key={ad._id} className="hover:bg-slate-50/80 transition-colors">
                           {/* Thumbnail */}
                           <td className="py-3 px-4">
-                            <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-700 border border-slate-600 shrink-0">
+                            <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                               <Image
                                 src={coverImg}
                                 alt={ad.title}
@@ -776,124 +781,124 @@ export default function SuperadminDashboardPage() {
 
                           {/* Title & Category */}
                           <td className="py-3 px-4 max-w-xs">
-                            <p className="font-bold text-white line-clamp-1">{ad.title}</p>
+                            <p className="font-bold text-slate-900 line-clamp-1">{ad.title}</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[10px] font-semibold bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded uppercase">
+                              <span className="text-[10px] font-bold bg-blue-50 text-[#0047BA] px-1.5 py-0.5 rounded uppercase">
                                 {ad.category}
                               </span>
-                              <span className="text-[10px] text-slate-400">
+                              <span className="text-[10px] text-slate-500">
                                 {ad.condition}
                               </span>
                               {ad.isFeatured && (
-                                <span className="text-[10px] font-bold text-amber-400 flex items-center gap-0.5">
-                                  <Star className="w-3 h-3 fill-amber-400" /> Featured
+                                <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5">
+                                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> Featured
                                 </span>
                               )}
                             </div>
                           </td>
 
                           {/* Price */}
-                          <td className="py-3 px-4 font-black text-emerald-400 text-sm">
+                          <td className="py-3 px-4 font-black text-[#0047BA] text-sm">
                             {formatPrice(ad.price)}
                           </td>
 
                           {/* Seller */}
                           <td className="py-3 px-4">
-                            <p className="font-bold text-slate-200">
+                            <p className="font-bold text-slate-900">
                               {ad.seller?.name || ad.sellerContact?.name || "Seller"}
                             </p>
-                            <p className="text-[10px] text-slate-400 font-mono">
+                            <p className="text-[10px] text-slate-500 font-mono">
                               {ad.seller?.phone || ad.sellerContact?.phone}
                             </p>
                           </td>
 
                           {/* Location */}
                           <td className="py-3 px-4">
-                            <div className="flex items-center gap-1 text-slate-300">
-                              <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <div className="flex items-center gap-1 text-slate-700">
+                              <MapPin className="w-3.5 h-3.5 text-[#FF6A00] shrink-0" />
                               <span>{ad.location?.city || "Kathmandu"}</span>
                             </div>
                             {ad.location?.area && (
-                              <p className="text-[10px] text-slate-500 pl-4.5">
+                              <p className="text-[10px] text-slate-400 pl-4.5">
                                 {ad.location.area}
                               </p>
                             )}
                           </td>
 
                           {/* Submitted */}
-                          <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
+                          <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
                             {new Date(ad.createdAt).toLocaleDateString()}
                           </td>
 
                           {/* Status */}
                           <td className="py-3 px-4">
                             <span
-                              className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                              className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider ${
                                 ad.status === "approved"
-                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
                                   : ad.status === "rejected"
-                                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                                  : "bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse"
+                                  ? "bg-rose-50 text-rose-800 border border-rose-300"
+                                  : "bg-amber-50 text-amber-800 border border-amber-300"
                               }`}
                             >
-                              {ad.status}
+                              {ad.status === "pending" ? "Pending Review" : ad.status}
                             </span>
                           </td>
 
                           {/* Actions */}
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Review / View Details Button */}
+                              {/* Review Details Button */}
                               <button
                                 onClick={() => {
                                   setReviewAd(ad);
                                   setActiveReviewImg(0);
                                 }}
-                                title="Review Full Ad Details"
-                                className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Review Details"
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors border border-slate-200"
                               >
                                 <Eye className="w-3.5 h-3.5" />
                                 <span className="hidden lg:inline">Review</span>
                               </button>
 
-                              {/* Quick Approve (If pending or rejected) */}
+                              {/* Quick Approve Button */}
                               {ad.status !== "approved" && (
                                 <button
                                   onClick={() => handleApproveAd(ad._id)}
                                   disabled={isActionLoading}
                                   title="Approve & Publish Live"
-                                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                                 >
                                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                                   <span className="hidden lg:inline">Approve</span>
                                 </button>
                               )}
 
-                              {/* Quick Reject (If pending) */}
+                              {/* Quick Reject Button */}
                               {ad.status === "pending" && (
                                 <button
                                   onClick={() => openRejectDialog(ad)}
                                   disabled={isActionLoading}
                                   title="Reject with Reason"
-                                  className="px-2.5 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                                  className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
                                 >
                                   <X className="w-3.5 h-3.5" />
                                   <span className="hidden lg:inline">Reject</span>
                                 </button>
                               )}
 
-                              {/* Toggle Featured (If approved) */}
+                              {/* Featured Toggle */}
                               {ad.status === "approved" && (
                                 <button
                                   onClick={() => handleToggleFeatured(ad._id)}
                                   title="Toggle Featured"
                                   className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                                     ad.isFeatured
-                                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                                      : "bg-slate-700 text-slate-400 border-slate-600 hover:text-white"
+                                      ? "bg-amber-50 text-amber-600 border-amber-300"
+                                      : "bg-slate-50 text-slate-400 border-slate-200 hover:text-slate-700"
                                   }`}
                                 >
-                                  <Star className={`w-3.5 h-3.5 ${ad.isFeatured ? "fill-amber-400" : ""}`} />
+                                  <Star className={`w-3.5 h-3.5 ${ad.isFeatured ? "fill-amber-500 text-amber-500" : ""}`} />
                                 </button>
                               )}
                             </div>
@@ -905,10 +910,10 @@ export default function SuperadminDashboardPage() {
                     {advertisements.length === 0 && (
                       <tr>
                         <td colSpan={8} className="py-12 text-center text-slate-400">
-                          <p className="font-bold text-sm text-slate-300">
+                          <p className="font-bold text-sm text-slate-700">
                             No advertisements found in this view.
                           </p>
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-slate-400 mt-1">
                             New user submissions will automatically arrive under Pending Approvals.
                           </p>
                         </td>
@@ -922,31 +927,31 @@ export default function SuperadminDashboardPage() {
         </main>
       </div>
 
-      {/* Review Modal (Full Advertisement Inspection & Approval Modal) */}
+      {/* Review Modal (White & Logo Theme) */}
       {reviewAd && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-4xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95">
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-2.5">
                 <span
-                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                  className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider ${
                     reviewAd.status === "approved"
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
                       : reviewAd.status === "rejected"
-                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                      : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      ? "bg-rose-50 text-rose-800 border border-rose-300"
+                      : "bg-amber-50 text-amber-800 border border-amber-300"
                   }`}
                 >
-                  {reviewAd.status}
+                  {reviewAd.status === "pending" ? "Pending Review" : reviewAd.status}
                 </span>
-                <h3 className="text-base font-bold text-white line-clamp-1">
+                <h3 className="text-base font-black text-slate-900 line-clamp-1">
                   {reviewAd.title}
                 </h3>
               </div>
               <button
                 onClick={() => setReviewAd(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -956,12 +961,12 @@ export default function SuperadminDashboardPage() {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Photo Gallery Grid */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Uploaded Photos ({reviewAd.images?.length || 0})
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Uploaded Product Photos ({reviewAd.images?.length || 0})
                 </h4>
                 <div className="flex flex-col sm:flex-row gap-4">
                   {/* Main Selected Image */}
-                  <div className="relative flex-1 h-64 sm:h-80 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800">
+                  <div className="relative flex-1 h-64 sm:h-80 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
                     <Image
                       src={
                         reviewAd.images[activeReviewImg]?.url ||
@@ -982,8 +987,8 @@ export default function SuperadminDashboardPage() {
                           onClick={() => setActiveReviewImg(idx)}
                           className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
                             activeReviewImg === idx
-                              ? "border-blue-500 scale-105"
-                              : "border-slate-800 opacity-60 hover:opacity-100"
+                              ? "border-[#0047BA] shadow-md"
+                              : "border-slate-200 opacity-70 hover:opacity-100"
                           }`}
                         >
                           <Image
@@ -1002,58 +1007,58 @@ export default function SuperadminDashboardPage() {
               {/* Advertisement Details Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 {/* Product Info */}
-                <div className="space-y-4 bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
-                  <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+                <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <h4 className="text-xs font-bold text-[#0047BA] uppercase tracking-wider">
                     Product Specification
                   </h4>
                   <div className="space-y-2 text-xs">
-                    <div className="flex justify-between py-1 border-b border-slate-800">
-                      <span className="text-slate-400">Price</span>
-                      <span className="font-black text-emerald-400 text-sm">
+                    <div className="flex justify-between py-1 border-b border-slate-200">
+                      <span className="text-slate-500">Price</span>
+                      <span className="font-black text-[#0047BA] text-sm">
                         {formatPrice(reviewAd.price)}
                       </span>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-800">
-                      <span className="text-slate-400">Category</span>
-                      <span className="font-bold text-white uppercase">{reviewAd.category}</span>
+                    <div className="flex justify-between py-1 border-b border-slate-200">
+                      <span className="text-slate-500">Category</span>
+                      <span className="font-bold text-slate-800 uppercase">{reviewAd.category}</span>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-800">
-                      <span className="text-slate-400">Condition</span>
-                      <span className="font-bold text-white">{reviewAd.condition}</span>
+                    <div className="flex justify-between py-1 border-b border-slate-200">
+                      <span className="text-slate-500">Condition</span>
+                      <span className="font-bold text-slate-800">{reviewAd.condition}</span>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-800">
-                      <span className="text-slate-400">Location</span>
-                      <span className="font-bold text-white">
+                    <div className="flex justify-between py-1 border-b border-slate-200">
+                      <span className="text-slate-500">Location</span>
+                      <span className="font-bold text-slate-800">
                         {reviewAd.location?.area
                           ? `${reviewAd.location.area}, ${reviewAd.location.city}`
                           : reviewAd.location?.city}
                       </span>
                     </div>
                     <div className="flex justify-between py-1">
-                      <span className="text-slate-400">Submitted Date</span>
-                      <span className="font-mono text-slate-300">
+                      <span className="text-slate-500">Submitted Date</span>
+                      <span className="font-mono text-slate-700">
                         {new Date(reviewAd.createdAt).toLocaleString()}
                       </span>
                     </div>
                   </div>
 
                   <div>
-                    <span className="text-[11px] font-bold text-slate-400 block mb-1">
+                    <span className="text-[11px] font-bold text-slate-600 block mb-1">
                       Description:
                     </span>
-                    <p className="text-xs text-slate-300 bg-slate-900/80 p-3 rounded-xl leading-relaxed whitespace-pre-wrap border border-slate-800">
+                    <p className="text-xs text-slate-700 bg-white p-3 rounded-xl leading-relaxed whitespace-pre-wrap border border-slate-200">
                       {reviewAd.description}
                     </p>
                   </div>
                 </div>
 
                 {/* Seller Info */}
-                <div className="space-y-4 bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
-                  <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+                <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <h4 className="text-xs font-bold text-[#0047BA] uppercase tracking-wider">
                     Seller Profile &amp; Contact Details
                   </h4>
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-700 border border-slate-600 shrink-0">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-white border border-slate-300 shrink-0">
                       <Image
                         src={
                           reviewAd.seller?.avatar ||
@@ -1066,24 +1071,24 @@ export default function SuperadminDashboardPage() {
                       />
                     </div>
                     <div>
-                      <h5 className="font-bold text-white">
+                      <h5 className="font-bold text-slate-900">
                         {reviewAd.seller?.name || reviewAd.sellerContact?.name || "Verified Seller"}
                       </h5>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-500">
                         {reviewAd.seller?.city || reviewAd.location?.city}
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-2 text-xs pt-2">
-                    <div className="flex items-center gap-2 text-slate-300">
-                      <Phone className="w-4 h-4 text-slate-400" />
-                      <span className="font-mono">
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <Phone className="w-4 h-4 text-[#0047BA]" />
+                      <span className="font-mono font-bold">
                         {reviewAd.seller?.phone || reviewAd.sellerContact?.phone}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-300">
-                      <Mail className="w-4 h-4 text-slate-400" />
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <Mail className="w-4 h-4 text-[#FF6A00]" />
                       <span className="font-mono">
                         {reviewAd.seller?.email || reviewAd.sellerContact?.email}
                       </span>
@@ -1091,11 +1096,11 @@ export default function SuperadminDashboardPage() {
                   </div>
 
                   {reviewAd.rejectionReason && (
-                    <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-1">
-                      <span className="text-[11px] font-bold text-rose-400 block">
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
+                      <span className="text-[11px] font-bold text-rose-800 block">
                         Existing Rejection Reason:
                       </span>
-                      <p className="text-xs text-rose-200">{reviewAd.rejectionReason}</p>
+                      <p className="text-xs text-rose-700">{reviewAd.rejectionReason}</p>
                     </div>
                   )}
                 </div>
@@ -1103,11 +1108,11 @@ export default function SuperadminDashboardPage() {
             </div>
 
             {/* Modal Actions Footer */}
-            <div className="p-4 sm:p-5 bg-slate-950/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setReviewAd(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 cursor-pointer"
               >
                 Close Preview
               </button>
@@ -1117,7 +1122,7 @@ export default function SuperadminDashboardPage() {
                   type="button"
                   onClick={() => openRejectDialog(reviewAd)}
                   disabled={isActionLoading}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
                 >
                   Reject Advertisement
                 </button>
@@ -1126,7 +1131,7 @@ export default function SuperadminDashboardPage() {
                   type="button"
                   onClick={() => handleApproveAd(reviewAd._id)}
                   disabled={isActionLoading}
-                  className="px-6 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 cursor-pointer"
+                  className="px-6 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <Check className="w-4 h-4 stroke-[3]" />
                   <span>Approve &amp; Publish Live</span>
@@ -1137,21 +1142,21 @@ export default function SuperadminDashboardPage() {
         </div>
       )}
 
-      {/* Rejection Reason Modal */}
+      {/* Rejection Reason Modal (White Theme) */}
       {rejectionModalAd && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
-            <div className="flex items-center gap-3 text-rose-400">
-              <div className="p-2 rounded-xl bg-rose-500/10">
-                <AlertTriangle className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-3xl p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-2 rounded-xl bg-rose-50">
+                <AlertTriangle className="w-5 h-5 text-rose-600" />
               </div>
-              <h3 className="text-base font-bold text-white">Reject Advertisement</h3>
+              <h3 className="text-base font-black text-slate-900">Reject Advertisement</h3>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 leading-relaxed">
               Please state why this advertisement cannot be approved. This reason will be
-              sent in a real-time notification to{" "}
-              <strong className="text-white">
+              sent in a notification to{" "}
+              <strong className="text-slate-900">
                 {rejectionModalAd.seller?.name || "the seller"}
               </strong>
               , allowing them to fix and resubmit.
@@ -1161,15 +1166,15 @@ export default function SuperadminDashboardPage() {
               rows={4}
               value={rejectionReasonInput}
               onChange={(e) => setRejectionReasonInput(e.target.value)}
-              placeholder="e.g. Price is unrealistically low, or photos violate community standards..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition-colors"
+              placeholder="e.g. Price is unrealistically low, or photos violate community guidelines..."
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white transition-colors"
             />
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setRejectionModalAd(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
               >
                 Cancel
               </button>
@@ -1177,7 +1182,7 @@ export default function SuperadminDashboardPage() {
                 type="button"
                 onClick={handleConfirmReject}
                 disabled={isActionLoading || !rejectionReasonInput.trim()}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
               >
                 Confirm Rejection &amp; Notify Seller
               </button>

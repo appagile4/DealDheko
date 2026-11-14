@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import api from "@/lib/api";
 import {
@@ -16,8 +17,7 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
-  Cpu,
-  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function AdminLoginPage() {
@@ -72,37 +72,38 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between bg-[#080C15] text-slate-100 relative overflow-hidden select-none">
-      {/* Background Decorative Ambient Glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-blue-600/15 via-[#00A896]/10 to-transparent blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#FF6A00]/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Top Standalone Header Bar */}
-      <header className="relative z-10 w-full px-6 py-4 border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-md flex items-center justify-between">
+    <div className="min-h-screen w-full flex flex-col justify-between bg-gradient-to-b from-[#F0F6FF] via-[#F8FAFC] to-[#FFF4EB]/40 text-slate-900 relative select-none">
+      {/* Top Header Bar */}
+      <header className="w-full px-6 py-4 bg-white/80 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0047BA] to-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
-            <Shield className="w-5 h-5 stroke-[2.5]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-black text-base text-white tracking-tight">DealDoko</span>
-              <span className="text-[10px] font-black bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                Superadmin
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 font-medium">Internal Administration &amp; Moderation</p>
+          <Link href="/" className="inline-flex items-center hover:opacity-95 transition-opacity">
+            <Image
+              src="/dealdoko-logo.png"
+              alt="DealDoko"
+              width={160}
+              height={55}
+              priority
+              className="h-10 w-auto object-contain"
+            />
+          </Link>
+
+          <span className="h-5 w-px bg-slate-200 hidden sm:block" />
+
+          <div className="hidden sm:flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-[#0047BA] text-xs font-black px-2.5 py-1 rounded-lg uppercase tracking-wider">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#0047BA]" />
+            <span>Superadmin Portal</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>MongoDB Atlas Cluster Live</span>
           </div>
+
           <Link
             href="/"
-            className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors font-semibold"
+            className="text-xs font-bold text-slate-600 hover:text-[#0047BA] flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100"
           >
             <span>Public Marketplace</span>
             <ExternalLink className="w-3.5 h-3.5" />
@@ -110,49 +111,63 @@ export default function AdminLoginPage() {
         </div>
       </header>
 
-      {/* Central Login Card Container */}
-      <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
-        <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl backdrop-blur-2xl space-y-6">
-          {/* Card Header */}
-          <div className="text-center space-y-2">
-            <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-[#0047BA] to-blue-500 text-white shadow-xl shadow-blue-500/20 mb-1">
-              <Lock className="w-6 h-6 stroke-[2.5]" />
+      {/* Main Login Card */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xl shadow-slate-200/50 space-y-6">
+          {/* Brand Logo & Title */}
+          <div className="text-center space-y-3">
+            <div className="flex justify-center mb-1">
+              <Image
+                src="/dealdoko-logo.png"
+                alt="DealDoko Logo"
+                width={200}
+                height={68}
+                priority
+                className="h-12 w-auto object-contain"
+              />
             </div>
 
-            <h1 className="text-2xl font-black tracking-tight text-white">
-              Superadmin Portal
-            </h1>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
-              Authorized administrative access for DealDoko classified marketplace moderation &amp; control.
-            </p>
+            <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-orange-50 border border-blue-200/60 text-[#0047BA] text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+              <Shield className="w-3.5 h-3.5 text-[#FF6A00]" />
+              <span>Administrative Access</span>
+            </div>
+
+            <div>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                Superadmin Sign In
+              </h1>
+              <p className="text-xs text-slate-500 mt-1">
+                Enter your master credentials to manage advertisement approvals and user controls.
+              </p>
+            </div>
           </div>
 
-          {/* Error Alert */}
+          {/* Error Message */}
           {error && (
-            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold px-4 py-3 rounded-xl flex items-center gap-2.5 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl flex items-center gap-2.5 text-xs font-medium animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Success Alert */}
+          {/* Success Message */}
           {success && (
-            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold px-4 py-3 rounded-xl flex items-center gap-2.5 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Authentication verified! Entering dashboard...</span>
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-2.5 text-xs font-medium animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Authentication verified! Opening dashboard...</span>
             </div>
           )}
 
-          {/* Login Form */}
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 text-left">
-            {/* Email input */}
+            {/* Email Field */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Admin Email
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 text-slate-400 pointer-events-none">
-                  <Mail className="w-4 h-4" />
+                  <Mail className="w-4 h-4 text-[#0047BA]" />
                 </div>
                 <input
                   type="email"
@@ -160,19 +175,19 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@dealdheko.com"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0047BA] focus:ring-2 focus:ring-[#0047BA]/20 transition-all font-mono"
                 />
               </div>
             </div>
 
-            {/* Password input */}
+            {/* Password Field */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Master Password
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 text-slate-400 pointer-events-none">
-                  <Lock className="w-4 h-4" />
+                  <Lock className="w-4 h-4 text-[#FF6A00]" />
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -180,34 +195,34 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0047BA] focus:ring-2 focus:ring-[#0047BA]/20 transition-all font-mono"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 text-slate-400 hover:text-white cursor-pointer"
+                  className="absolute right-3.5 text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Default Credentials Notice */}
-            <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-[11px] text-slate-400 space-y-1">
+            {/* Autofill / Pre-filled Box */}
+            <div className="p-3 bg-gradient-to-r from-blue-50/80 to-orange-50/60 border border-slate-200 rounded-xl text-[11px] text-slate-600 space-y-1">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-blue-400 font-semibold">
-                  <KeyRound className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1.5 text-[#0047BA] font-bold">
+                  <KeyRound className="w-3.5 h-3.5 text-[#FF6A00]" />
                   <span>Default Root Account:</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleFillCredentials}
-                  className="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
+                  className="text-[10px] text-[#0047BA] hover:text-[#FF6A00] font-bold underline cursor-pointer"
                 >
                   Autofill
                 </button>
               </div>
-              <div className="font-mono text-[10px] text-slate-300">
+              <div className="font-mono text-[10px] text-slate-800">
                 admin@dealdheko.com / Admin@DealDheko2026!
               </div>
             </div>
@@ -216,7 +231,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={isLoading || success}
-              className="w-full py-3 px-4 bg-gradient-to-r from-[#0047BA] to-blue-600 hover:from-blue-700 hover:to-blue-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full py-3 px-4 bg-[#0047BA] hover:bg-[#00338D] text-white font-extrabold text-sm rounded-xl shadow-md shadow-[#0047BA]/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
             >
               {isLoading ? (
                 <>
@@ -232,11 +247,11 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          {/* Back link */}
-          <div className="pt-2 text-center border-t border-slate-800">
+          {/* Return Link */}
+          <div className="pt-2 text-center border-t border-slate-100">
             <Link
               href="/"
-              className="text-xs text-slate-400 hover:text-white transition-colors"
+              className="text-xs font-semibold text-slate-500 hover:text-[#0047BA] transition-colors"
             >
               ← Return to DealDoko Public Marketplace
             </Link>
@@ -244,9 +259,9 @@ export default function AdminLoginPage() {
         </div>
       </main>
 
-      {/* Standalone Bottom Footer Bar */}
-      <footer className="relative z-10 w-full px-6 py-3 border-t border-slate-800/80 bg-slate-950/40 text-center text-xs text-slate-500">
-        <span>DealDoko Marketplace Administration Engine • Secured with Role-Based Access Control (RBAC)</span>
+      {/* Bottom Footer */}
+      <footer className="w-full px-6 py-3 bg-white/60 border-t border-slate-200/80 text-center text-xs text-slate-500">
+        <span>DealDoko Marketplace Administration • Secured with Role-Based Access Control (RBAC)</span>
       </footer>
     </div>
   );

@@ -15,10 +15,10 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
 
-  // Standalone dedicated layout for Superadmin Portal routes (/admin and /admin/dashboard)
+  // Standalone dedicated white/brand layout for Superadmin Portal routes (/admin and /admin/dashboard)
   if (isAdmin) {
     return (
-      <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col">
+      <div className="min-h-screen w-full bg-[#F8FAFC] text-slate-900 flex flex-col antialiased">
         {children}
       </div>
     );
