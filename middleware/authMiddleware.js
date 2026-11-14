@@ -39,6 +39,13 @@ export const protect = async (req, res, next) => {
       });
     }
 
+    if (user.isSuspended || user.status === "suspended") {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been suspended by administration. Please contact support.",
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {
@@ -50,4 +57,18 @@ export const protect = async (req, res, next) => {
           : "Invalid authentication token.",
     });
   }
+};
+
+/**
+ * Superadmin Authorization Middleware
+ * Verifies that the authenticated user possesses the 'superadmin' role.
+ */
+export const requireAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== "superadmin") {
+    return res.status(403).json({
+      success: false,
+      message: "Access forbidden. Superadmin privileges required.",
+    });
+  }
+  next();
 };

@@ -33,3 +33,44 @@ export const uploadImage = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Upload multiple images to Cloudinary (up to 8 files for ads)
+ * @route   POST /api/upload/multiple
+ */
+export const uploadMultiple = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No image files provided.",
+      });
+    }
+
+    const folder = req.body.folder || "dealdoko_advertisements";
+    const uploadPromises = req.files.map((file) =>
+      uploadToCloudinary(file.buffer, folder)
+    );
+
+    const results = await Promise.all(uploadPromises);
+
+    const uploadedImages = results.map((r) => ({
+      url: r.secure_url,
+      publicId: r.public_id,
+      width: r.width,
+      height: r.height,
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: `${uploadedImages.length} images uploaded to Cloudinary successfully!`,
+      images: uploadedImages,
+    });
+  } catch (error) {
+    console.error("Cloudinary Multi-Upload Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to upload images to Cloudinary.",
+    });
+  }
+};

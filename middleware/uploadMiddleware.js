@@ -15,3 +15,9 @@ export const uploadSingleImage = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter,
 }).single("image");
+
+export const uploadMultipleImages = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+  fileFilter,
+}).array("images", 8);

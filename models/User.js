@@ -54,6 +54,21 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    role: {
+      type: String,
+      enum: ["user", "superadmin"],
+      default: "user",
+      index: true,
+    },
+    status: {
+      type: String,
+      enum: ["active", "suspended"],
+      default: "active",
+    },
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
