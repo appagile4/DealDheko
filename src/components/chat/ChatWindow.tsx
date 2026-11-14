@@ -123,9 +123,33 @@ export function ChatWindow({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isSendingRef = useRef(false);
+  const isInitialLoadRef = useRef(true);
 
+  // Robust Auto-Scroll to Bottom on Message Receive / Send / Page Refresh
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    const performScroll = () => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({
+          behavior,
+          block: "end",
+          inline: "nearest",
+        });
+      }
+    };
+
+    // Immediate scroll
+    performScroll();
+
+    // Multi-phase raf and timeout checks to account for DOM painting and image layout shifts
+    if (typeof window !== "undefined") {
+      requestAnimationFrame(performScroll);
+      setTimeout(performScroll, 50);
+      setTimeout(performScroll, 150);
+      setTimeout(performScroll, 350);
+    }
   };
 
   // 1. Initialize or load conversation & message history
@@ -368,9 +392,21 @@ export function ChatWindow({
     };
   }, [activeConvId, partner.id, user]);
 
+  // Auto-scroll to bottom on initial load, refresh, new messages, or partner typing
   useEffect(() => {
-    scrollToBottom("smooth");
-  }, [messages.length, isPartnerTyping]);
+    if (messages.length > 0) {
+      // Use instant 'auto' on initial load/refresh for seamless zero-flicker positioning, smooth thereafter
+      scrollToBottom(isInitialLoadRef.current ? "auto" : "smooth");
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+      }
+    }
+  }, [messages, isLoadingMessages, isPartnerTyping]);
+
+  // Reset initial load flag whenever active conversation changes
+  useEffect(() => {
+    isInitialLoadRef.current = true;
+  }, [activeConvId]);
 
   // 3. Load Older Messages (Pagination)
   const handleLoadMore = async () => {
@@ -515,6 +551,7 @@ export function ChatWindow({
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
+    scrollToBottom("auto");
     if (onNewMessageSent && activeConvId) {
       onNewMessageSent(activeConvId, textToSend || "Photo");
     }
