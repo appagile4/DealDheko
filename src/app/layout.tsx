@@ -1,7 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { AppLayoutShell } from "@/components/layout/AppLayoutShell";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#0047BA",
+};
 
 export const metadata: Metadata = {
   title: "DealDoko — Buy • Sell • Find in Nepal | dealdoko.com",
