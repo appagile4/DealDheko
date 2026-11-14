@@ -168,9 +168,10 @@ export default function AdminLoginPage() {
                 <input
                   type="email"
                   required
+                  autoComplete="off"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@dealdheko.com"
+                  placeholder="Enter admin email"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0047BA] focus:ring-2 focus:ring-[#0047BA]/20 transition-all font-mono"
                 />
               </div>
@@ -188,9 +189,10 @@ export default function AdminLoginPage() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="Enter master password"
                   className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#0047BA] focus:ring-2 focus:ring-[#0047BA]/20 transition-all font-mono"
                 />
                 <button
