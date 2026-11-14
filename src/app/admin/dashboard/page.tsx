@@ -324,7 +324,7 @@ export default function SuperadminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col -mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
+    <div className="min-h-screen w-full bg-slate-900 text-slate-100 flex flex-col">
       {/* Top Admin Header Bar */}
       <header className="h-16 bg-slate-950/80 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 backdrop-blur-md">
         <div className="flex items-center gap-3">

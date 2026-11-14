@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
-import { MarketplaceProvider } from "@/context/MarketplaceContext";
-import { MainHeader } from "@/components/layout/MainHeader";
-import { CategoryNavigation } from "@/components/layout/CategoryNavigation";
-import { MainFooter } from "@/components/layout/MainFooter";
-import { MobileNavigation } from "@/components/layout/MobileNavigation";
-import { LocationModal } from "@/components/layout/LocationModal";
-import { AuthModal } from "@/components/layout/AuthModal";
-import { ChatModal } from "@/components/chat/ChatModal";
+import { AppLayoutShell } from "@/components/layout/AppLayoutShell";
 
 export const metadata: Metadata = {
   title: "DealDoko — Buy • Sell • Find in Nepal | dealdoko.com",
@@ -46,29 +39,9 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-[#F7F9FC] text-slate-900 selection:bg-[#FF6A00] selection:text-white" suppressHydrationWarning>
         <ReduxProvider>
-          <MarketplaceProvider>
-            {/* Main Top Header */}
-            <MainHeader />
-
-            {/* Secondary Category Navigation & Mega Menu */}
-            <CategoryNavigation />
-
-            {/* Page Content */}
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-              {children}
-            </main>
-
-            {/* Footer */}
-            <MainFooter />
-
-            {/* Mobile Bottom Navigation Bar */}
-            <MobileNavigation />
-
-            {/* Global Modals */}
-            <LocationModal />
-            <AuthModal />
-            <ChatModal />
-          </MarketplaceProvider>
+          <AppLayoutShell>
+            {children}
+          </AppLayoutShell>
         </ReduxProvider>
       </body>
     </html>
