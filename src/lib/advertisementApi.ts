@@ -16,6 +16,8 @@ export interface BackendAdvertisement {
     city: string;
     area?: string;
     pincode?: string;
+    latitude?: number | null;
+    longitude?: number | null;
   };
   seller?: {
     _id: string;
@@ -69,6 +71,8 @@ export function mapAdToProduct(ad: BackendAdvertisement | any): Product {
       state: ad.location?.state || "Bagmati",
       area: ad.location?.area || "",
       pincode: ad.location?.pincode || "",
+      latitude: ad.location?.latitude ?? null,
+      longitude: ad.location?.longitude ?? null,
     },
     seller: {
       id: ad.seller?._id || ad.seller?.id || "seller-unknown",
@@ -216,7 +220,14 @@ export async function createAd(payload: {
   subCategory?: string;
   condition: "New" | "Used";
   images: Array<{ url: string; publicId?: string } | string>;
-  location: { state?: string; city: string; area?: string; pincode?: string };
+  location: {
+    state?: string;
+    city: string;
+    area?: string;
+    pincode?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
   sellerContact?: { name: string; phone: string; email?: string };
   attributes?: Record<string, any>;
 }): Promise<{ success: boolean; message: string; advertisement: BackendAdvertisement }> {

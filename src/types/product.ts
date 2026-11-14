@@ -20,6 +20,8 @@ export interface Product {
     state: string;
     area?: string;
     pincode?: string;
+    latitude?: number | null;
+    longitude?: number | null;
   };
   seller: Seller;
   postedAt: string;

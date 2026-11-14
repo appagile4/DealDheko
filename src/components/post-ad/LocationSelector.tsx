@@ -1,6 +1,23 @@
+"use client";
+
 import React from "react";
+import dynamic from "next/dynamic";
 import { Input } from "@/components/common/Input";
 import { INDIAN_STATES, POPULAR_CITIES } from "@/data/locations";
+
+// Dynamic client-side import for Leaflet map to guarantee zero SSR issues during Next.js builds
+const LocationMapPicker = dynamic(
+  () => import("./LocationMapPicker").then((mod) => mod.LocationMapPicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-64 sm:h-72 rounded-2xl bg-slate-100 border border-slate-200 animate-pulse flex flex-col items-center justify-center gap-2 text-xs text-slate-400 font-semibold">
+        <div className="w-6 h-6 rounded-full border-2 border-slate-300 border-t-[#0047BA] animate-spin" />
+        <span>Loading Interactive Location Map...</span>
+      </div>
+    ),
+  }
+);
 
 interface LocationSelectorProps {
   locationData: {
@@ -8,6 +25,8 @@ interface LocationSelectorProps {
     city: string;
     area: string;
     pincode: string;
+    latitude?: number | null;
+    longitude?: number | null;
   };
   sellerData: {
     name: string;
@@ -15,7 +34,7 @@ interface LocationSelectorProps {
     email: string;
   };
   errors: Record<string, string>;
-  onChangeLocation: (field: string, value: string) => void;
+  onChangeLocation: (field: string, value: any) => void;
   onChangeSeller: (field: string, value: string) => void;
 }
 
@@ -43,7 +62,7 @@ export function LocationSelector({
             <select
               value={locationData.state}
               onChange={(e) => onChangeLocation("state", e.target.value)}
-              className="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-[#0A2540]"
+              className="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-[#0A2540] bg-white text-slate-900"
             >
               <option value="">Select State</option>
               {INDIAN_STATES.map((s) => (
@@ -60,7 +79,7 @@ export function LocationSelector({
             <select
               value={locationData.city}
               onChange={(e) => onChangeLocation("city", e.target.value)}
-              className="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-[#0A2540]"
+              className="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-[#0A2540] bg-white text-slate-900"
             >
               <option value="">Select City</option>
               {POPULAR_CITIES.filter((c) => c.name !== "All India").map((c) => (
@@ -88,6 +107,31 @@ export function LocationSelector({
             onChange={(e) => onChangeLocation("pincode", e.target.value)}
           />
         </div>
+
+        {/* Interactive Map & Exact Coordinates Picker */}
+        <LocationMapPicker
+          latitude={locationData.latitude ?? null}
+          longitude={locationData.longitude ?? null}
+          state={locationData.state}
+          city={locationData.city}
+          area={locationData.area}
+          pincode={locationData.pincode}
+          onCoordinatesChange={(lat, lng) => {
+            onChangeLocation("latitude", lat);
+            onChangeLocation("longitude", lng);
+          }}
+          onAddressDetected={(detected) => {
+            if (detected.area && !locationData.area) {
+              onChangeLocation("area", detected.area);
+            }
+            if (detected.city && !locationData.city) {
+              onChangeLocation("city", detected.city);
+            }
+            if (detected.state && !locationData.state) {
+              onChangeLocation("state", detected.state);
+            }
+          }}
+        />
       </div>
 
       {/* Seller Information */}

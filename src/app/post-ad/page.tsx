@@ -47,6 +47,8 @@ export default function PostAdPage() {
     city: "Kathmandu",
     area: "",
     pincode: "",
+    latitude: 27.7172 as number | null,
+    longitude: 85.324 as number | null,
   });
   const [sellerData, setSellerData] = useState({
     name: user?.name || "Verified Seller",
@@ -168,6 +170,8 @@ export default function PostAdPage() {
           state: locationData.state,
           area: locationData.area,
           pincode: locationData.pincode,
+          latitude: locationData.latitude ?? null,
+          longitude: locationData.longitude ?? null,
         },
         seller: {
           id: user?.id || "user-101",
