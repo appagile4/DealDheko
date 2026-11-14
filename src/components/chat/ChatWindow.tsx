@@ -57,6 +57,37 @@ export function ChatWindow({
     propConversationId || initialConversation?._id || null
   );
 
+  const myId = (user?.id || (user as any)?._id || "").toString();
+
+  const resolvePartner = () => {
+    if (propProduct?.seller) {
+      return {
+        id: propProduct.seller.id,
+        name: propProduct.seller.name,
+        avatar: propProduct.seller.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+        phone: propProduct.seller.phone,
+        isVerified: propProduct.seller.verified,
+        lastSeen: null,
+      };
+    }
+
+    const otherParticipant =
+      initialConversation?.participants?.find(
+        (p: any) => (p._id || p.id || "").toString() !== myId
+      ) ||
+      initialConversation?.participants?.[0] ||
+      null;
+
+    return {
+      id: (otherParticipant?._id || otherParticipant?.id || initialConversation?.sellerId || "").toString(),
+      name: otherParticipant?.name || initialConversation?.sellerName || "Chat Partner",
+      avatar: otherParticipant?.avatar || initialConversation?.sellerAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+      phone: otherParticipant?.phone || initialConversation?.sellerPhone,
+      isVerified: otherParticipant?.isVerified || initialConversation?.sellerVerified,
+      lastSeen: otherParticipant?.lastSeen || null,
+    };
+  };
+
   const [partner, setPartner] = useState<{
     id: string;
     name: string;
@@ -65,23 +96,7 @@ export function ChatWindow({
     isVerified?: boolean;
     city?: string;
     lastSeen?: string | null;
-  }>({
-    id:
-      propProduct?.seller?.id ||
-      initialConversation?.participants?.find((p: any) => p._id !== user?.id)?._id ||
-      "",
-    name:
-      propProduct?.seller?.name ||
-      initialConversation?.participants?.find((p: any) => p._id !== user?.id)?.name ||
-      "Seller",
-    avatar:
-      propProduct?.seller?.avatar ||
-      initialConversation?.participants?.find((p: any) => p._id !== user?.id)?.avatar ||
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
-    phone: propProduct?.seller?.phone,
-    isVerified: propProduct?.seller?.verified,
-    lastSeen: null,
-  });
+  }>(resolvePartner());
 
   const [adInfo, setAdInfo] = useState<{
     id?: string;
@@ -125,30 +140,28 @@ export function ChatWindow({
   const isSendingRef = useRef(false);
   const isInitialLoadRef = useRef(true);
 
-  // Robust Auto-Scroll to Bottom on Message Receive / Send / Page Refresh
+  // Robust Auto-Scroll to Bottom on Message Receive / Send / Page Refresh (Container-Only, Never Scrolls Window)
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     const performScroll = () => {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-      }
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({
-          behavior,
-          block: "end",
-          inline: "nearest",
-        });
+      const container = messagesContainerRef.current;
+      if (container) {
+        if (behavior === "smooth") {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: "smooth",
+          });
+        } else {
+          container.scrollTop = container.scrollHeight;
+        }
       }
     };
 
-    // Immediate scroll
     performScroll();
 
-    // Multi-phase raf and timeout checks to account for DOM painting and image layout shifts
     if (typeof window !== "undefined") {
       requestAnimationFrame(performScroll);
       setTimeout(performScroll, 50);
       setTimeout(performScroll, 150);
-      setTimeout(performScroll, 350);
     }
   };
 
@@ -209,6 +222,42 @@ export function ChatWindow({
             }
           }
         } else if (convId) {
+          try {
+            const convRes = await api.get(`/chat/conversations/${convId}`);
+            if (convRes.data?.conversation && isMounted) {
+              const c = convRes.data.conversation;
+              const other = c.participants?.find(
+                (p: any) => (p._id || p.id || "").toString() !== myId
+              );
+              if (other) {
+                setPartner({
+                  id: (other._id || other.id).toString(),
+                  name: other.name,
+                  avatar: other.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+                  phone: other.phone,
+                  isVerified: other.isVerified,
+                  city: other.city,
+                  lastSeen: other.lastSeen,
+                });
+                if (other.lastSeen) setPartnerLastSeen(other.lastSeen);
+              }
+
+              if (c.advertisement) {
+                const ad = c.advertisement;
+                setAdInfo({
+                  id: ad._id,
+                  title: ad.title,
+                  price: ad.price,
+                  image: ad.images?.[0]?.url || ad.images?.[0] || "",
+                  location: ad.location?.city || "Nepal",
+                  slug: ad.slug,
+                });
+              }
+            }
+          } catch {
+            // non-fatal if conversation info is already present
+          }
+
           const res = await api.get(`/chat/conversations/${convId}/messages?limit=40`);
           if (!isMounted) return;
 
@@ -654,7 +703,7 @@ export function ChatWindow({
   const EMOJI_LIST = ["😊", "👍", "🙏", "🤝", "🔥", "👌", "🚗", "📱", "🏠", "💯", "📍", "💰"];
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#EFEAE2] relative overflow-hidden font-sans">
+    <div className="flex flex-col h-full w-full bg-[#EFEAE2] relative overflow-hidden min-h-0 font-sans">
       {/* 1. WHATSAPP STYLE TOP HEADER */}
       <div className="bg-[#F0F2F5] px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-slate-300/80 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
@@ -787,7 +836,7 @@ export function ChatWindow({
             handleLoadMore();
           }
         }}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 relative"
+        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-1 relative"
         style={{
           backgroundImage: `radial-gradient(#CBD5E1 1px, transparent 1px)`,
           backgroundSize: "20px 20px",

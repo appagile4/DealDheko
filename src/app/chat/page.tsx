@@ -168,6 +168,10 @@ function ChatContent() {
   const formatWhatsAppTime = (isoString?: string) => {
     if (!isoString) return "";
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+      return isoString;
+    }
+
     const now = new Date();
     const isToday =
       date.getDate() === now.getDate() &&
@@ -195,9 +199,9 @@ function ChatContent() {
     <div className="space-y-4">
       <Breadcrumb items={breadcrumbItems} />
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs h-[720px] max-h-[85vh] flex flex-col min-h-0">
         {!user ? (
-          <div className="p-12 text-center max-w-md mx-auto space-y-4">
+          <div className="p-12 text-center max-w-md mx-auto space-y-4 my-auto">
             <div className="w-16 h-16 rounded-full bg-[#0047BA]/10 text-[#0047BA] flex items-center justify-center mx-auto">
               <MessageSquare className="w-8 h-8" />
             </div>
@@ -213,10 +217,10 @@ function ChatContent() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-12 h-[680px] max-h-[82vh]">
+          <div className="grid grid-cols-1 md:grid-cols-12 h-full min-h-0 flex-1 overflow-hidden">
             {/* LEFT COLUMN: WhatsApp Web Conversation List */}
             <div
-              className={`md:col-span-5 lg:col-span-4 border-r border-slate-200 flex flex-col bg-white h-full ${
+              className={`md:col-span-5 lg:col-span-4 border-r border-slate-200 flex flex-col bg-white h-full min-h-0 overflow-hidden ${
                 showMobileChat ? "hidden md:flex" : "flex"
               }`}
             >
@@ -413,12 +417,13 @@ function ChatContent() {
 
             {/* RIGHT COLUMN: Active WhatsApp Chat Window */}
             <div
-              className={`md:col-span-7 lg:col-span-8 flex flex-col h-full bg-[#EFEAE2] ${
+              className={`md:col-span-7 lg:col-span-8 flex flex-col h-full min-h-0 overflow-hidden bg-[#EFEAE2] ${
                 !showMobileChat ? "hidden md:flex" : "flex"
               }`}
             >
               {activeConversation ? (
                 <ChatWindow
+                  key={activeConversation.id || activeConversation._id}
                   conversationId={activeConversation.id || activeConversation._id}
                   initialConversation={activeConversation}
                   onBack={() => setShowMobileChat(false)}

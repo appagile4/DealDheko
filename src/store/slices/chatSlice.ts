@@ -242,31 +242,62 @@ const chatSlice = createSlice({
       })
       .addCase(fetchConversations.fulfilled, (state, action) => {
         state.isLoadingConversations = false;
-        state.conversations = action.payload.map((conv: any) => ({
-          id: conv._id,
-          _id: conv._id,
-          productId: conv.advertisement?._id || "",
-          productTitle: conv.advertisement?.title || "Classified Item",
-          productPrice: conv.advertisement?.price || 0,
-          productImage:
-            conv.advertisement?.images?.[0]?.url ||
-            (typeof conv.advertisement?.images?.[0] === "string" ? conv.advertisement.images[0] : ""),
-          productSlug: conv.advertisement?.slug,
-          productLocation: conv.advertisement?.location?.city || "Nepal",
-          buyerId: conv.buyer,
-          sellerId: conv.participants?.find((p: any) => p._id !== conv.buyer)?._id || conv.seller,
-          sellerName: conv.participants?.find((p: any) => p._id !== conv.buyer)?.name || "Seller",
-          sellerAvatar: conv.participants?.find((p: any) => p._id !== conv.buyer)?.avatar || "",
-          sellerPhone: conv.participants?.find((p: any) => p._id !== conv.buyer)?.phone,
-          sellerVerified: conv.participants?.find((p: any) => p._id !== conv.buyer)?.isVerified,
-          lastMessage: conv.lastMessage || conv.lastMessageText || "",
-          lastMessageTime: new Date(conv.lastMessageAt || conv.updatedAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          unreadCount: conv.unreadCount || 0,
-          updatedAt: conv.lastMessageAt || conv.updatedAt,
-        }));
+        const currentUserId = typeof window !== "undefined"
+          ? (() => {
+              try {
+                const u = JSON.parse(
+                  localStorage.getItem("deal_dheko_user") ||
+                  localStorage.getItem("dealdoko_admin_user") ||
+                  "{}"
+                );
+                return (u.id || u._id || "").toString();
+              } catch {
+                return "";
+              }
+            })()
+          : "";
+
+        state.conversations = action.payload.map((conv: any) => {
+          const participants = conv.participants || [];
+          // Resolve partner as the other participant who is not the current user
+          const partner =
+            participants.find(
+              (p: any) => (p._id || p.id || "").toString() !== currentUserId
+            ) ||
+            participants.find(
+              (p: any) => (p._id || p.id || "").toString() === conv.seller?.toString()
+            ) ||
+            participants[0] ||
+            {};
+
+          const partnerName = partner.name || "User";
+          const partnerAvatar =
+            partner.avatar ||
+            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+
+          return {
+            id: conv._id,
+            _id: conv._id,
+            productId: conv.advertisement?._id || "",
+            productTitle: conv.advertisement?.title || "Classified Item",
+            productPrice: conv.advertisement?.price || 0,
+            productImage:
+              conv.advertisement?.images?.[0]?.url ||
+              (typeof conv.advertisement?.images?.[0] === "string" ? conv.advertisement.images[0] : ""),
+            productSlug: conv.advertisement?.slug,
+            productLocation: conv.advertisement?.location?.city || "Nepal",
+            buyerId: conv.buyer,
+            sellerId: (partner._id || partner.id || "").toString(),
+            sellerName: partnerName,
+            sellerAvatar: partnerAvatar,
+            sellerPhone: partner.phone,
+            sellerVerified: partner.isVerified,
+            lastMessage: conv.lastMessage || conv.lastMessageText || "",
+            lastMessageTime: conv.lastMessageAt || conv.updatedAt || "",
+            unreadCount: conv.unreadCount || 0,
+            updatedAt: conv.lastMessageAt || conv.updatedAt,
+          };
+        });
       })
       .addCase(fetchConversations.rejected, (state, action) => {
         state.isLoadingConversations = false;
