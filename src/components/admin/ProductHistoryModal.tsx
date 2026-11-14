@@ -176,7 +176,7 @@ export function ProductHistoryModal({
               <div className="flex items-center justify-center py-20">
                 <div className="inline-flex items-center gap-2 bg-white px-4 py-2.5 rounded-full shadow-sm text-xs font-bold text-slate-600 border border-slate-200">
                   <Loader2 className="w-4 h-4 animate-spin text-[#00A884]" />
-                  <span>Loading product ledger from MongoDB Atlas...</span>
+                  <span>Loading product history ledger...</span>
                 </div>
               </div>
             )}

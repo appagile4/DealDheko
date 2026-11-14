@@ -108,16 +108,30 @@ export default function SuperadminDashboardPage() {
 
   // Navigation & UI States
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "pending" | "approved" | "rejected" | "all" | "deals" | "users" | "audit" | "banners"
+    | "dashboard"
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "all"
+    | "deals"
+    | "users"
+    | "audit"
+    | "banners"
   >("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<
+    string | null
+  >(null);
 
   // Product Provenance & Chat Transcript Modals
-  const [selectedHistoryAdId, setSelectedHistoryAdId] = useState<string | null>(null);
-  const [selectedTranscriptConvId, setSelectedTranscriptConvId] = useState<string | null>(null);
+  const [selectedHistoryAdId, setSelectedHistoryAdId] = useState<string | null>(
+    null,
+  );
+  const [selectedTranscriptConvId, setSelectedTranscriptConvId] = useState<
+    string | null
+  >(null);
 
   // Stats State
   const [stats, setStats] = useState<AdminStats>({
@@ -138,7 +152,8 @@ export default function SuperadminDashboardPage() {
   const [activeReviewImg, setActiveReviewImg] = useState<number>(0);
 
   // Reject with Reason Modal State
-  const [rejectionModalAd, setRejectionModalAd] = useState<AdvertisementItem | null>(null);
+  const [rejectionModalAd, setRejectionModalAd] =
+    useState<AdvertisementItem | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
   const [isActionLoading, setIsActionLoading] = useState(false);
 
@@ -169,7 +184,8 @@ export default function SuperadminDashboardPage() {
       if (activeTab === "pending") statusQuery = "pending";
       else if (activeTab === "approved") statusQuery = "approved";
       else if (activeTab === "rejected") statusQuery = "rejected";
-      else if (activeTab === "all" || activeTab === "dashboard") statusQuery = "all";
+      else if (activeTab === "all" || activeTab === "dashboard")
+        statusQuery = "all";
 
       const res = await api.get("/admin/advertisements", {
         params: {
@@ -239,7 +255,14 @@ export default function SuperadminDashboardPage() {
     } else {
       fetchAdvertisements();
     }
-  }, [activeTab, fetchStats, fetchAdvertisements, fetchUsers, fetchAuditLogs, router]);
+  }, [
+    activeTab,
+    fetchStats,
+    fetchAdvertisements,
+    fetchUsers,
+    fetchAuditLogs,
+    router,
+  ]);
 
   // Approve Advertisement handler
   const handleApproveAd = async (adId: string) => {
@@ -247,7 +270,9 @@ export default function SuperadminDashboardPage() {
     try {
       const res = await api.put(`/admin/advertisements/${adId}/approve`);
       if (res.data.success) {
-        showToast("Advertisement approved! It is now live on DealDoko marketplace.");
+        showToast(
+          "Advertisement approved! It is now live on DealDoko marketplace.",
+        );
         setReviewAd(null);
         fetchStats();
         fetchAdvertisements();
@@ -269,15 +294,20 @@ export default function SuperadminDashboardPage() {
   const handleConfirmReject = async () => {
     if (!rejectionModalAd) return;
     if (!rejectionReasonInput.trim()) {
-      alert("Please provide a rejection reason so the seller knows how to fix their advertisement.");
+      alert(
+        "Please provide a rejection reason so the seller knows how to fix their advertisement.",
+      );
       return;
     }
 
     setIsActionLoading(true);
     try {
-      const res = await api.put(`/admin/advertisements/${rejectionModalAd._id}/reject`, {
-        reason: rejectionReasonInput.trim(),
-      });
+      const res = await api.put(
+        `/admin/advertisements/${rejectionModalAd._id}/reject`,
+        {
+          reason: rejectionReasonInput.trim(),
+        },
+      );
 
       if (res.data.success) {
         showToast("Advertisement rejected and seller notified with reason.");
@@ -301,7 +331,7 @@ export default function SuperadminDashboardPage() {
         showToast(
           res.data.isFeatured
             ? "Advertisement promoted to Featured Homepage tier!"
-            : "Featured status removed."
+            : "Featured status removed.",
         );
         fetchAdvertisements();
       }
@@ -343,7 +373,7 @@ export default function SuperadminDashboardPage() {
             <Menu className="w-5 h-5" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
             <Image
               src="/dealdoko-logo.png"
               alt="DealDoko"
@@ -352,7 +382,7 @@ export default function SuperadminDashboardPage() {
               priority
               className="h-9 w-auto object-contain"
             />
-          </Link>
+          </div>
 
           <span className="h-5 w-px bg-slate-200 hidden sm:block" />
 
@@ -364,20 +394,6 @@ export default function SuperadminDashboardPage() {
 
         {/* Right Admin Profile & Status */}
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>MongoDB &amp; Socket.IO Live</span>
-          </div>
-
-          <Link
-            href="/"
-            target="_blank"
-            className="hidden md:flex items-center gap-1.5 text-xs text-slate-600 hover:text-[#0047BA] font-bold transition-colors px-3 py-1.5 rounded-xl hover:bg-slate-100"
-          >
-            <span>Public Marketplace</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
-
           <button
             onClick={handleLogout}
             title="Sign out of Superadmin"
@@ -400,7 +416,11 @@ export default function SuperadminDashboardPage() {
           {/* Navigation Items */}
           <nav className="space-y-1 px-2">
             {[
-              { id: "dashboard", label: "Dashboard Overview", icon: LayoutDashboard },
+              {
+                id: "dashboard",
+                label: "Dashboard Overview",
+                icon: LayoutDashboard,
+              },
               {
                 id: "pending",
                 label: "Pending Approvals",
@@ -454,7 +474,9 @@ export default function SuperadminDashboardPage() {
                 >
                   <div className="flex items-center gap-3 truncate">
                     <Icon className="w-4 h-4 shrink-0" />
-                    {isSidebarOpen && <span className="truncate">{item.label}</span>}
+                    {isSidebarOpen && (
+                      <span className="truncate">{item.label}</span>
+                    )}
                   </div>
 
                   {isSidebarOpen && item.badge !== undefined && (
@@ -508,8 +530,12 @@ export default function SuperadminDashboardPage() {
               <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
                 Total Ads
               </span>
-              <p className="text-2xl font-black text-slate-900">{stats.totalAds}</p>
-              <span className="text-[10px] text-slate-500">All submissions</span>
+              <p className="text-2xl font-black text-slate-900">
+                {stats.totalAds}
+              </p>
+              <span className="text-[10px] text-slate-500">
+                All submissions
+              </span>
             </div>
 
             {/* Pending Approvals (Mandatory Stage - Doko Orange Highlight) */}
@@ -523,8 +549,12 @@ export default function SuperadminDashboardPage() {
                 </span>
                 <span className="w-2.5 h-2.5 rounded-full bg-[#FF6A00] animate-ping" />
               </div>
-              <p className="text-2xl font-black text-[#FF6A00]">{stats.pendingAds}</p>
-              <span className="text-[10px] text-orange-700 font-bold">Requires approval →</span>
+              <p className="text-2xl font-black text-[#FF6A00]">
+                {stats.pendingAds}
+              </p>
+              <span className="text-[10px] text-orange-700 font-bold">
+                Requires approval →
+              </span>
             </div>
 
             {/* Approved Live */}
@@ -535,8 +565,12 @@ export default function SuperadminDashboardPage() {
               <span className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-wider">
                 Approved Live
               </span>
-              <p className="text-2xl font-black text-emerald-700">{stats.approvedAds}</p>
-              <span className="text-[10px] text-slate-500">Visible on marketplace</span>
+              <p className="text-2xl font-black text-emerald-700">
+                {stats.approvedAds}
+              </p>
+              <span className="text-[10px] text-slate-500">
+                Visible on marketplace
+              </span>
             </div>
 
             {/* Rejected */}
@@ -547,8 +581,12 @@ export default function SuperadminDashboardPage() {
               <span className="text-[11px] font-extrabold text-rose-600 uppercase tracking-wider">
                 Rejected
               </span>
-              <p className="text-2xl font-black text-rose-600">{stats.rejectedAds}</p>
-              <span className="text-[10px] text-slate-500">Awaiting edit &amp; resubmit</span>
+              <p className="text-2xl font-black text-rose-600">
+                {stats.rejectedAds}
+              </p>
+              <span className="text-[10px] text-slate-500">
+                Awaiting edit &amp; resubmit
+              </span>
             </div>
 
             {/* Registered Users */}
@@ -559,8 +597,12 @@ export default function SuperadminDashboardPage() {
               <span className="text-[11px] font-extrabold text-[#0047BA] uppercase tracking-wider">
                 Total Users
               </span>
-              <p className="text-2xl font-black text-[#0047BA]">{stats.totalUsers}</p>
-              <span className="text-[10px] text-slate-500">Sellers &amp; buyers</span>
+              <p className="text-2xl font-black text-[#0047BA]">
+                {stats.totalUsers}
+              </p>
+              <span className="text-[10px] text-slate-500">
+                Sellers &amp; buyers
+              </span>
             </div>
           </div>
 
@@ -572,28 +614,28 @@ export default function SuperadminDashboardPage() {
                   {activeTab === "pending"
                     ? "Pending Advertisements (Awaiting Superadmin Approval)"
                     : activeTab === "approved"
-                    ? "Approved Live Advertisements"
-                    : activeTab === "rejected"
-                    ? "Rejected Advertisements"
-                    : activeTab === "deals"
-                    ? "Marketplace Transactions, Deals & Buyer Inquiries"
-                    : activeTab === "banners"
-                    ? "Homepage Hero Banners (2-Second Carousel)"
-                    : activeTab === "users"
-                    ? "Registered Users Directory"
-                    : activeTab === "audit"
-                    ? "Superadmin Action Audit Trail"
-                    : "Marketplace Advertisements Registry"}
+                      ? "Approved Live Advertisements"
+                      : activeTab === "rejected"
+                        ? "Rejected Advertisements"
+                        : activeTab === "deals"
+                          ? "Marketplace Transactions, Deals & Buyer Inquiries"
+                          : activeTab === "banners"
+                            ? "Homepage Hero Banners (2-Second Carousel)"
+                            : activeTab === "users"
+                              ? "Registered Users Directory"
+                              : activeTab === "audit"
+                                ? "Superadmin Action Audit Trail"
+                                : "Marketplace Advertisements Registry"}
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
                 {activeTab === "pending"
                   ? "Carefully review product photos and description before approving for public display."
                   : activeTab === "deals"
-                  ? "Full buyer-seller transparency: see who is buying what from whose seller, final sale prices, and all negotiation logs."
-                  : activeTab === "banners"
-                  ? "Upload unlimited promotional banners. Active banners smoothly loop every 2 seconds on the marketplace."
-                  : "Live data directly synchronized with MongoDB Atlas cluster."}
+                    ? "Full buyer-seller transparency: see who is buying what from whose seller, final sale prices, and all negotiation logs."
+                    : activeTab === "banners"
+                      ? "Upload unlimited promotional banners. Active banners smoothly loop every 2 seconds on the marketplace."
+                      : "Live data directly synchronized with database."}
               </p>
             </div>
 
@@ -616,10 +658,12 @@ export default function SuperadminDashboardPage() {
                   else if (activeTab === "audit") fetchAuditLogs();
                   else fetchAdvertisements();
                 }}
-                title="Refresh from MongoDB"
+                title="Refresh data"
                 className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition-colors cursor-pointer shadow-xs"
               >
-                <RotateCw className={`w-4 h-4 ${isLoading ? "animate-spin text-[#00A896]" : ""}`} />
+                <RotateCw
+                  className={`w-4 h-4 ${isLoading ? "animate-spin text-[#00A896]" : ""}`}
+                />
               </button>
             </div>
           </div>
@@ -643,7 +687,10 @@ export default function SuperadminDashboardPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-800">
                     {users.map((u) => (
-                      <tr key={u._id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr
+                        key={u._id}
+                        className="hover:bg-slate-50/80 transition-colors"
+                      >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
@@ -659,9 +706,12 @@ export default function SuperadminDashboardPage() {
                               />
                             </div>
                             <div>
-                              <p className="font-bold text-slate-900">{u.name}</p>
+                              <p className="font-bold text-slate-900">
+                                {u.name}
+                              </p>
                               <p className="text-[10px] text-slate-400">
-                                Joined {new Date(u.createdAt).toLocaleDateString()}
+                                Joined{" "}
+                                {new Date(u.createdAt).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
@@ -682,7 +732,9 @@ export default function SuperadminDashboardPage() {
                             {u.role}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{u.adCount} ads</td>
+                        <td className="py-3 px-4 font-bold text-slate-900">
+                          {u.adCount} ads
+                        </td>
                         <td className="py-3 px-4">
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded ${
@@ -691,7 +743,9 @@ export default function SuperadminDashboardPage() {
                                 : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             }`}
                           >
-                            {u.isSuspended || u.status === "suspended" ? "Suspended" : "Active"}
+                            {u.isSuspended || u.status === "suspended"
+                              ? "Suspended"
+                              : "Active"}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -730,7 +784,10 @@ export default function SuperadminDashboardPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-800">
                     {auditLogs.map((log) => (
-                      <tr key={log._id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr
+                        key={log._id}
+                        className="hover:bg-slate-50/80 transition-colors"
+                      >
                         <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
                           {new Date(log.createdAt).toLocaleString()}
                         </td>
@@ -743,8 +800,8 @@ export default function SuperadminDashboardPage() {
                               log.action === "ad_approved"
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 : log.action === "ad_rejected"
-                                ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                : "bg-blue-50 text-[#0047BA] border border-blue-200"
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                  : "bg-blue-50 text-[#0047BA] border border-blue-200"
                             }`}
                           >
                             {log.action}
@@ -754,13 +811,17 @@ export default function SuperadminDashboardPage() {
                           {log.targetType}
                         </td>
                         <td className="py-3 px-4 text-xs text-slate-700">
-                          {log.metadata?.title || JSON.stringify(log.metadata || {})}
+                          {log.metadata?.title ||
+                            JSON.stringify(log.metadata || {})}
                         </td>
                       </tr>
                     ))}
                     {auditLogs.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-400">
+                        <td
+                          colSpan={5}
+                          className="py-8 text-center text-slate-400"
+                        >
                           No audit log entries recorded yet.
                         </td>
                       </tr>
@@ -776,7 +837,9 @@ export default function SuperadminDashboardPage() {
             /* Marketplace Deals & Buyer Inquiries Table */
             <DealsTable
               onViewProductHistory={(adId) => setSelectedHistoryAdId(adId)}
-              onInspectTranscript={(convId) => setSelectedTranscriptConvId(convId)}
+              onInspectTranscript={(convId) =>
+                setSelectedTranscriptConvId(convId)
+              }
             />
           ) : (
             /* Advertisements Table */
@@ -792,7 +855,9 @@ export default function SuperadminDashboardPage() {
                       <th className="py-3 px-4">Location</th>
                       <th className="py-3 px-4">Submitted</th>
                       <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Moderation Actions</th>
+                      <th className="py-3 px-4 text-right">
+                        Moderation Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -802,7 +867,10 @@ export default function SuperadminDashboardPage() {
                         "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80";
 
                       return (
-                        <tr key={ad._id} className="hover:bg-slate-50/80 transition-colors">
+                        <tr
+                          key={ad._id}
+                          className="hover:bg-slate-50/80 transition-colors"
+                        >
                           {/* Thumbnail */}
                           <td className="py-3 px-4">
                             <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
@@ -818,7 +886,9 @@ export default function SuperadminDashboardPage() {
 
                           {/* Title & Category */}
                           <td className="py-3 px-4 max-w-xs">
-                            <p className="font-bold text-slate-900 line-clamp-1">{ad.title}</p>
+                            <p className="font-bold text-slate-900 line-clamp-1">
+                              {ad.title}
+                            </p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className="text-[10px] font-bold bg-blue-50 text-[#0047BA] px-1.5 py-0.5 rounded uppercase">
                                 {ad.category}
@@ -828,7 +898,8 @@ export default function SuperadminDashboardPage() {
                               </span>
                               {ad.isFeatured && (
                                 <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5">
-                                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> Featured
+                                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" />{" "}
+                                  Featured
                                 </span>
                               )}
                             </div>
@@ -842,7 +913,9 @@ export default function SuperadminDashboardPage() {
                           {/* Seller */}
                           <td className="py-3 px-4">
                             <p className="font-bold text-slate-900">
-                              {ad.seller?.name || ad.sellerContact?.name || "Seller"}
+                              {ad.seller?.name ||
+                                ad.sellerContact?.name ||
+                                "Seller"}
                             </p>
                             <p className="text-[10px] text-slate-500 font-mono">
                               {ad.seller?.phone || ad.sellerContact?.phone}
@@ -874,11 +947,13 @@ export default function SuperadminDashboardPage() {
                                 ad.status === "approved"
                                   ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
                                   : ad.status === "rejected"
-                                  ? "bg-rose-50 text-rose-800 border border-rose-300"
-                                  : "bg-amber-50 text-amber-800 border border-amber-300"
+                                    ? "bg-rose-50 text-rose-800 border border-rose-300"
+                                    : "bg-amber-50 text-amber-800 border border-amber-300"
                               }`}
                             >
-                              {ad.status === "pending" ? "Pending Review" : ad.status}
+                              {ad.status === "pending"
+                                ? "Pending Review"
+                                : ad.status}
                             </span>
                           </td>
 
@@ -905,7 +980,9 @@ export default function SuperadminDashboardPage() {
                                 className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#0047BA] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors border border-blue-200"
                               >
                                 <History className="w-3.5 h-3.5" />
-                                <span className="hidden lg:inline">History</span>
+                                <span className="hidden lg:inline">
+                                  History
+                                </span>
                               </button>
 
                               {/* Quick Approve Button */}
@@ -917,7 +994,9 @@ export default function SuperadminDashboardPage() {
                                   className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                                 >
                                   <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                  <span className="hidden lg:inline">Approve</span>
+                                  <span className="hidden lg:inline">
+                                    Approve
+                                  </span>
                                 </button>
                               )}
 
@@ -930,7 +1009,9 @@ export default function SuperadminDashboardPage() {
                                   className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
                                 >
                                   <X className="w-3.5 h-3.5" />
-                                  <span className="hidden lg:inline">Reject</span>
+                                  <span className="hidden lg:inline">
+                                    Reject
+                                  </span>
                                 </button>
                               )}
 
@@ -945,7 +1026,9 @@ export default function SuperadminDashboardPage() {
                                       : "bg-slate-50 text-slate-400 border-slate-200 hover:text-slate-700"
                                   }`}
                                 >
-                                  <Star className={`w-3.5 h-3.5 ${ad.isFeatured ? "fill-amber-500 text-amber-500" : ""}`} />
+                                  <Star
+                                    className={`w-3.5 h-3.5 ${ad.isFeatured ? "fill-amber-500 text-amber-500" : ""}`}
+                                  />
                                 </button>
                               )}
                             </div>
@@ -956,12 +1039,16 @@ export default function SuperadminDashboardPage() {
 
                     {advertisements.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                        <td
+                          colSpan={8}
+                          className="py-12 text-center text-slate-400"
+                        >
                           <p className="font-bold text-sm text-slate-700">
                             No advertisements found in this view.
                           </p>
                           <p className="text-xs text-slate-400 mt-1">
-                            New user submissions will automatically arrive under Pending Approvals.
+                            New user submissions will automatically arrive under
+                            Pending Approvals.
                           </p>
                         </td>
                       </tr>
@@ -986,11 +1073,13 @@ export default function SuperadminDashboardPage() {
                     reviewAd.status === "approved"
                       ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
                       : reviewAd.status === "rejected"
-                      ? "bg-rose-50 text-rose-800 border border-rose-300"
-                      : "bg-amber-50 text-amber-800 border border-amber-300"
+                        ? "bg-rose-50 text-rose-800 border border-rose-300"
+                        : "bg-amber-50 text-amber-800 border border-amber-300"
                   }`}
                 >
-                  {reviewAd.status === "pending" ? "Pending Review" : reviewAd.status}
+                  {reviewAd.status === "pending"
+                    ? "Pending Review"
+                    : reviewAd.status}
                 </span>
                 <h3 className="text-base font-black text-slate-900 line-clamp-1">
                   {reviewAd.title}
@@ -1067,11 +1156,15 @@ export default function SuperadminDashboardPage() {
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Category</span>
-                      <span className="font-bold text-slate-800 uppercase">{reviewAd.category}</span>
+                      <span className="font-bold text-slate-800 uppercase">
+                        {reviewAd.category}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Condition</span>
-                      <span className="font-bold text-slate-800">{reviewAd.condition}</span>
+                      <span className="font-bold text-slate-800">
+                        {reviewAd.condition}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Location</span>
@@ -1119,7 +1212,9 @@ export default function SuperadminDashboardPage() {
                     </div>
                     <div>
                       <h5 className="font-bold text-slate-900">
-                        {reviewAd.seller?.name || reviewAd.sellerContact?.name || "Verified Seller"}
+                        {reviewAd.seller?.name ||
+                          reviewAd.sellerContact?.name ||
+                          "Verified Seller"}
                       </h5>
                       <p className="text-xs text-slate-500">
                         {reviewAd.seller?.city || reviewAd.location?.city}
@@ -1131,13 +1226,15 @@ export default function SuperadminDashboardPage() {
                     <div className="flex items-center gap-2 text-slate-700">
                       <Phone className="w-4 h-4 text-[#0047BA]" />
                       <span className="font-mono font-bold">
-                        {reviewAd.seller?.phone || reviewAd.sellerContact?.phone}
+                        {reviewAd.seller?.phone ||
+                          reviewAd.sellerContact?.phone}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-700">
                       <Mail className="w-4 h-4 text-[#FF6A00]" />
                       <span className="font-mono">
-                        {reviewAd.seller?.email || reviewAd.sellerContact?.email}
+                        {reviewAd.seller?.email ||
+                          reviewAd.sellerContact?.email}
                       </span>
                     </div>
                   </div>
@@ -1147,7 +1244,9 @@ export default function SuperadminDashboardPage() {
                       <span className="text-[11px] font-bold text-rose-800 block">
                         Existing Rejection Reason:
                       </span>
-                      <p className="text-xs text-rose-700">{reviewAd.rejectionReason}</p>
+                      <p className="text-xs text-rose-700">
+                        {reviewAd.rejectionReason}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1212,12 +1311,14 @@ export default function SuperadminDashboardPage() {
               <div className="p-2 rounded-xl bg-rose-50">
                 <AlertTriangle className="w-5 h-5 text-rose-600" />
               </div>
-              <h3 className="text-base font-black text-slate-900">Reject Advertisement</h3>
+              <h3 className="text-base font-black text-slate-900">
+                Reject Advertisement
+              </h3>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Please state why this advertisement cannot be approved. This reason will be
-              sent in a notification to{" "}
+              Please state why this advertisement cannot be approved. This
+              reason will be sent in a notification to{" "}
               <strong className="text-slate-900">
                 {rejectionModalAd.seller?.name || "the seller"}
               </strong>

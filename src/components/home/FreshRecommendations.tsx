@@ -87,7 +87,7 @@ export function FreshRecommendations({ initialProducts }: FreshRecommendationsPr
               </h2>
               {liveApprovedAds.length > 0 && (
                 <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full uppercase">
-                  {liveApprovedAds.length} Live from MongoDB
+                  {liveApprovedAds.length} New
                 </span>
               )}
             </div>
