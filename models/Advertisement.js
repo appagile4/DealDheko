@@ -98,9 +98,29 @@ const advertisementSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "approved", "rejected", "sold"],
       default: "pending",
       index: true,
+    },
+    isSold: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    soldTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
+    soldPrice: {
+      type: Number,
+    },
+    soldAt: {
+      type: Date,
+    },
+    soldLocation: {
+      type: String,
+      default: "",
     },
     rejectionReason: {
       type: String,

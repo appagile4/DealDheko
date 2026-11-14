@@ -25,6 +25,12 @@ const conversationSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    dealStatus: {
+      type: String,
+      enum: ["inquired", "negotiating", "agreed", "sold", "cancelled"],
+      default: "inquired",
+      index: true,
+    },
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",
