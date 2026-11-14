@@ -31,7 +31,11 @@ import {
   Shield,
   History,
   ShieldCheck,
+  ShoppingBag,
 } from "lucide-react";
+import { ProductHistoryModal } from "@/components/admin/ProductHistoryModal";
+import { DealsTable } from "@/components/admin/DealsTable";
+import { ChatTranscriptModal } from "@/components/admin/ChatTranscriptModal";
 
 interface AdminStats {
   totalAds: number;
@@ -102,12 +106,16 @@ export default function SuperadminDashboardPage() {
 
   // Navigation & UI States
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "pending" | "approved" | "rejected" | "all" | "users" | "audit"
+    "dashboard" | "pending" | "approved" | "rejected" | "all" | "deals" | "users" | "audit"
   >("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+
+  // Product Provenance & Chat Transcript Modals
+  const [selectedHistoryAdId, setSelectedHistoryAdId] = useState<string | null>(null);
+  const [selectedTranscriptConvId, setSelectedTranscriptConvId] = useState<string | null>(null);
 
   // Stats State
   const [stats, setStats] = useState<AdminStats>({
@@ -408,6 +416,11 @@ export default function SuperadminDashboardPage() {
               { id: "rejected", label: "Rejected Ads", icon: XCircle },
               { id: "all", label: "All Advertisements", icon: FileText },
               {
+                id: "deals",
+                label: "Deals & Inquiries",
+                icon: ShoppingBag,
+              },
+              {
                 id: "users",
                 label: "User Management",
                 icon: Users,
@@ -555,6 +568,8 @@ export default function SuperadminDashboardPage() {
                     ? "Approved Live Advertisements"
                     : activeTab === "rejected"
                     ? "Rejected Advertisements"
+                    : activeTab === "deals"
+                    ? "Marketplace Transactions, Deals & Buyer Inquiries"
                     : activeTab === "users"
                     ? "Registered Users Directory"
                     : activeTab === "audit"
@@ -565,6 +580,8 @@ export default function SuperadminDashboardPage() {
               <p className="text-xs text-slate-500">
                 {activeTab === "pending"
                   ? "Carefully review product photos and description before approving for public display."
+                  : activeTab === "deals"
+                  ? "Full buyer-seller transparency: see who is buying what from whose seller, final sale prices, and all negotiation logs."
                   : "Live data directly synchronized with MongoDB Atlas cluster."}
               </p>
             </div>
@@ -741,6 +758,12 @@ export default function SuperadminDashboardPage() {
                 </table>
               </div>
             </div>
+          ) : activeTab === "deals" ? (
+            /* Marketplace Deals & Buyer Inquiries Table */
+            <DealsTable
+              onViewProductHistory={(adId) => setSelectedHistoryAdId(adId)}
+              onInspectTranscript={(convId) => setSelectedTranscriptConvId(convId)}
+            />
           ) : (
             /* Advertisements Table */
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
@@ -859,6 +882,16 @@ export default function SuperadminDashboardPage() {
                               >
                                 <Eye className="w-3.5 h-3.5" />
                                 <span className="hidden lg:inline">Review</span>
+                              </button>
+
+                              {/* View Product Provenance & Inquiries History Button */}
+                              <button
+                                onClick={() => setSelectedHistoryAdId(ad._id)}
+                                title="View Complete History, Buyer & Inquiries"
+                                className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#0047BA] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors border border-blue-200"
+                              >
+                                <History className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">History</span>
                               </button>
 
                               {/* Quick Approve Button */}
@@ -1109,13 +1142,28 @@ export default function SuperadminDashboardPage() {
 
             {/* Modal Actions Footer */}
             <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setReviewAd(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 cursor-pointer"
-              >
-                Close Preview
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReviewAd(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 cursor-pointer"
+                >
+                  Close Preview
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const id = reviewAd._id;
+                    setReviewAd(null);
+                    setSelectedHistoryAdId(id);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 text-[#0047BA] border border-blue-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <History className="w-4 h-4" />
+                  <span>View Product Provenance &amp; Inquiries</span>
+                </button>
+              </div>
 
               <div className="flex items-center gap-3">
                 <button
@@ -1190,6 +1238,24 @@ export default function SuperadminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Product Provenance & Buyer-Seller Lifecycle Modal */}
+      <ProductHistoryModal
+        isOpen={Boolean(selectedHistoryAdId)}
+        onClose={() => setSelectedHistoryAdId(null)}
+        advertisementId={selectedHistoryAdId}
+        onRecordSaleSuccess={() => {
+          fetchAdvertisements();
+          fetchStats();
+        }}
+      />
+
+      {/* Standalone Conversation Audit Transcript Modal */}
+      <ChatTranscriptModal
+        isOpen={Boolean(selectedTranscriptConvId)}
+        onClose={() => setSelectedTranscriptConvId(null)}
+        conversationId={selectedTranscriptConvId}
+      />
     </div>
   );
 }
