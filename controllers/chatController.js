@@ -43,24 +43,47 @@ export const getOrCreateConversation = async (req, res) => {
       participants: { $all: [req.user._id, actualSellerId] },
     })
       .populate("participants", "name avatar isVerified city phone")
-      .populate("advertisement", "title slug price images location status");
+      .populate("advertisement", "title slug price images location status seller");
 
     if (!conversation) {
       conversation = await Conversation.create({
         participants: [req.user._id, actualSellerId],
         advertisement: advertisementId,
         lastMessage: "Conversation started",
+        lastMessageSender: req.user._id,
         lastMessageAt: new Date(),
       });
 
       conversation = await Conversation.findById(conversation._id)
         .populate("participants", "name avatar isVerified city phone")
-        .populate("advertisement", "title slug price images location status");
+        .populate("advertisement", "title slug price images location status seller");
     }
+
+    // Fetch message history for this conversation
+    const rawMessages = await Message.find({ conversation: conversation._id })
+      .sort({ createdAt: 1 })
+      .populate("sender", "name avatar")
+      .populate("receiver", "name avatar");
+
+    const messages = rawMessages.map((m) => ({
+      _id: m._id,
+      id: m._id.toString(),
+      conversation: m.conversation,
+      sender: m.sender,
+      receiver: m.receiver,
+      message: m.message,
+      text: m.message,
+      messageType: m.messageType,
+      attachments: m.attachments,
+      isRead: m.isRead,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+    }));
 
     res.status(200).json({
       success: true,
       conversation,
+      messages,
     });
   } catch (error) {
     console.error("Get/Create Conversation Error:", error);
@@ -78,12 +101,28 @@ export const getOrCreateConversation = async (req, res) => {
  */
 export const getUserConversations = async (req, res) => {
   try {
-    const conversations = await Conversation.find({
+    const rawConversations = await Conversation.find({
       participants: req.user._id,
     })
       .sort({ lastMessageAt: -1 })
       .populate("participants", "name avatar isVerified city phone")
-      .populate("advertisement", "title slug price images location status");
+      .populate("advertisement", "title slug price images location status seller")
+      .lean();
+
+    // Attach unread message counts for current user
+    const conversations = await Promise.all(
+      rawConversations.map(async (conv) => {
+        const unreadCount = await Message.countDocuments({
+          conversation: conv._id,
+          receiver: req.user._id,
+          isRead: false,
+        });
+        return {
+          ...conv,
+          unreadCount,
+        };
+      })
+    );
 
     res.status(200).json({
       success: true,
@@ -125,10 +164,49 @@ export const getConversationMessages = async (req, res) => {
       });
     }
 
-    const messages = await Message.find({ conversation: req.params.id })
+    // Mark unread messages sent to me as read
+    await Message.updateMany(
+      {
+        conversation: req.params.id,
+        receiver: req.user._id,
+        isRead: false,
+      },
+      {
+        $set: { isRead: true, readAt: new Date() },
+      }
+    );
+
+    // Notify partner via socket
+    try {
+      const io = getIO();
+      if (io) {
+        io.to(`conversation_${req.params.id}`).emit("messages:read", {
+          conversationId: req.params.id,
+          readerId: req.user._id.toString(),
+          readAt: new Date(),
+        });
+      }
+    } catch {}
+
+    const rawMessages = await Message.find({ conversation: req.params.id })
       .sort({ createdAt: 1 })
       .populate("sender", "name avatar")
       .populate("receiver", "name avatar");
+
+    const messages = rawMessages.map((m) => ({
+      _id: m._id,
+      id: m._id.toString(),
+      conversation: m.conversation,
+      sender: m.sender,
+      receiver: m.receiver,
+      message: m.message,
+      text: m.message,
+      messageType: m.messageType,
+      attachments: m.attachments,
+      isRead: m.isRead,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+    }));
 
     res.status(200).json({
       success: true,
@@ -150,9 +228,10 @@ export const getConversationMessages = async (req, res) => {
  */
 export const sendMessage = async (req, res) => {
   try {
-    const { text, messageType = "text", attachments = [] } = req.body;
+    const { text, message: rawMessage, messageType = "text", attachments = [] } = req.body;
+    const content = (text || rawMessage || "").trim();
 
-    if (!text || !text.trim()) {
+    if (!content) {
       return res.status(400).json({
         success: false,
         message: "Message text cannot be empty.",
@@ -186,12 +265,12 @@ export const sendMessage = async (req, res) => {
       conversation: conversation._id,
       sender: req.user._id,
       receiver: receiverId,
-      message: text.trim(),
+      message: content,
       messageType,
       attachments,
     });
 
-    conversation.lastMessage = text.trim();
+    conversation.lastMessage = content;
     conversation.lastMessageSender = req.user._id;
     conversation.lastMessageAt = new Date();
     await conversation.save();
@@ -201,14 +280,29 @@ export const sendMessage = async (req, res) => {
       "name avatar"
     );
 
+    const normalized = {
+      _id: populated._id,
+      id: populated._id.toString(),
+      conversation: conversation._id,
+      sender: populated.sender,
+      receiver: receiverId,
+      message: populated.message,
+      text: populated.message,
+      messageType: populated.messageType,
+      attachments: populated.attachments,
+      isRead: populated.isRead,
+      createdAt: populated.createdAt,
+      updatedAt: populated.updatedAt,
+    };
+
     // Emit Socket event if io available
     try {
       const io = getIO();
       if (io) {
-        io.to(`conversation_${conversation._id}`).emit("message:new", populated);
+        io.to(`conversation_${conversation._id}`).emit("message:new", normalized);
         io.to(`user_${receiverId}`).emit("chat:new_message_alert", {
           conversationId: conversation._id,
-          message: populated,
+          message: normalized,
           senderName: req.user.name,
         });
       }
@@ -218,7 +312,7 @@ export const sendMessage = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: populated,
+      message: normalized,
     });
   } catch (error) {
     res.status(500).json({
@@ -245,6 +339,17 @@ export const markConversationRead = async (req, res) => {
         $set: { isRead: true, readAt: new Date() },
       }
     );
+
+    try {
+      const io = getIO();
+      if (io) {
+        io.to(`conversation_${req.params.id}`).emit("messages:read", {
+          conversationId: req.params.id,
+          readerId: req.user._id.toString(),
+          readAt: new Date(),
+        });
+      }
+    } catch {}
 
     res.status(200).json({
       success: true,
