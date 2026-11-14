@@ -88,6 +88,18 @@ export const createAdvertisement = async (req, res) => {
         city: location?.city || "Kathmandu",
         area: location?.area || "",
         pincode: location?.pincode || "",
+        latitude:
+          location?.latitude !== undefined &&
+          location?.latitude !== null &&
+          location?.latitude !== ""
+            ? Number(location.latitude)
+            : null,
+        longitude:
+          location?.longitude !== undefined &&
+          location?.longitude !== null &&
+          location?.longitude !== ""
+            ? Number(location.longitude)
+            : null,
       },
       seller: req.user._id,
       sellerContact: {

@@ -79,6 +79,14 @@ const advertisementSchema = new mongoose.Schema(
         type: String,
         default: "",
       },
+      latitude: {
+        type: Number,
+        default: null,
+      },
+      longitude: {
+        type: Number,
+        default: null,
+      },
     },
     seller: {
       type: mongoose.Schema.Types.ObjectId,
