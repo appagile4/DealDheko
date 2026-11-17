@@ -9,7 +9,7 @@ import { logoutUser, updateUserProfile, uploadUserAvatar } from "@/store/slices/
 export interface MockUser {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   phone: string;
   avatar: string;
   city: string;
@@ -74,7 +74,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       setUser({
         id: reduxUser._id || "user-101",
         name: reduxUser.name,
-        email: reduxUser.email,
+        email: reduxUser.email || "",
         phone: reduxUser.phone || "",
         avatar: reduxUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
         city: reduxUser.city || "Kathmandu",

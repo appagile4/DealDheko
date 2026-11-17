@@ -99,6 +99,7 @@ export function HeroBanner() {
                   alt={banner.title || `DealDoko Promotional Banner ${index + 1}`}
                   fill
                   priority={index === 0}
+                  loading={index === 0 ? "eager" : "lazy"}
                   unoptimized={
                     !banner.imageUrl.startsWith("/") &&
                     !banner.imageUrl.includes("res.cloudinary.com") &&

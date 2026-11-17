@@ -3,7 +3,7 @@ import { io, Socket } from "socket.io-client";
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_SOCKET_URL ||
   process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
-  "http://localhost:5000";
+  "https://api.dealdoko.com";
 
 let socketInstance: Socket | null = null;
 
@@ -23,7 +23,7 @@ export const getSocket = (): Socket => {
       query: {
         token,
       },
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,

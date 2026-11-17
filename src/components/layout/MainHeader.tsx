@@ -388,6 +388,7 @@ export function MainHeader() {
                     alt={user.name}
                     width={32}
                     height={32}
+                    unoptimized
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -433,6 +434,7 @@ export function MainHeader() {
                     alt={user.name}
                     width={24}
                     height={24}
+                    unoptimized
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -475,6 +477,7 @@ export function MainHeader() {
                       alt={user.name}
                       width={40}
                       height={40}
+                      unoptimized
                       className="w-full h-full object-cover"
                     />
                   </div>

@@ -161,6 +161,7 @@ export default function ProfilePage() {
                 alt={user.name}
                 width={96}
                 height={96}
+                unoptimized
                 className="w-full h-full object-cover"
               />
             </div>

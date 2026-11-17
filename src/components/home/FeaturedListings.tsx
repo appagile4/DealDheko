@@ -1,7 +1,10 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Product } from "@/types/product";
 import { ProductCard } from "@/components/products/ProductCard";
+import { getFeaturedAds } from "@/lib/advertisementApi";
 import { Flame, ArrowRight } from "lucide-react";
 
 interface FeaturedListingsProps {
@@ -9,7 +12,25 @@ interface FeaturedListingsProps {
 }
 
 export function FeaturedListings({ products }: FeaturedListingsProps) {
-  if (products.length === 0) return null;
+  const [liveFeatured, setLiveFeatured] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    getFeaturedAds(8)
+      .then((ads) => {
+        if (isMounted && ads && ads.length > 0) {
+          setLiveFeatured(ads);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const displayProducts = liveFeatured.length > 0 ? liveFeatured : products;
+
+  if (displayProducts.length === 0) return null;
 
   return (
     <section className="my-10 p-6 sm:p-8 bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent rounded-3xl border border-orange-200/60 space-y-6">
@@ -38,7 +59,7 @@ export function FeaturedListings({ products }: FeaturedListingsProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-        {products.slice(0, 4).map((product) => (
+        {displayProducts.slice(0, 4).map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
