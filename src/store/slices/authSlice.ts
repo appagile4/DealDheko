@@ -102,6 +102,11 @@ export const googleAuthUser = createAsyncThunk(
       const response = await api.post("/auth/google", payload);
       return response.data;
     } catch (err: any) {
+      if (err.response?.status === 404) {
+        return rejectWithValue(
+          "The /api/auth/google route is not yet deployed on the live server (https://api.dealdoko.com). Please deploy the updated Backend to enable Google OAuth."
+        );
+      }
       return rejectWithValue(
         err.response?.data?.message || "Google authentication failed. Please try again."
       );
@@ -117,6 +122,27 @@ export const sendEmailOtpUnified = createAsyncThunk(
       const response = await api.post("/auth/email/send-otp", payload);
       return response.data; // { success, message, email, exists, expiresIn }
     } catch (err: any) {
+      // Graceful fallback if live backend has not deployed unified routes yet
+      if (err.response?.status === 404) {
+        try {
+          const fallbackRes = await api.post("/auth/resend-otp", { email: payload.email });
+          return {
+            success: true,
+            message: fallbackRes.data.message || "A verification code has been sent to your email.",
+            email: payload.email,
+            exists: true,
+            expiresIn: fallbackRes.data.expiresIn || 60,
+          };
+        } catch (fallbackErr: any) {
+          const fallbackMsg = fallbackErr.response?.data?.message;
+          if (fallbackMsg === "No account found with this email.") {
+            return rejectWithValue(
+              "No account found with this email. Please sign up or deploy the latest Backend to enable passwordless registration."
+            );
+          }
+          return rejectWithValue(fallbackMsg || "Failed to send email verification code.");
+        }
+      }
       return rejectWithValue(
         err.response?.data?.message || "Failed to send email verification code."
       );
@@ -132,6 +158,26 @@ export const verifyEmailOtpUnified = createAsyncThunk(
       const response = await api.post("/auth/email/verify-otp", payload);
       return response.data; // { success, isNewUser, email, registrationToken, token?, user? }
     } catch (err: any) {
+      // Graceful fallback if live backend has not deployed unified routes yet
+      if (err.response?.status === 404) {
+        try {
+          const fallbackRes = await api.post("/auth/verify-otp", {
+            email: payload.email,
+            otp: payload.otp,
+          });
+          return {
+            success: true,
+            isNewUser: false,
+            email: payload.email,
+            token: fallbackRes.data.token,
+            user: fallbackRes.data.user,
+          };
+        } catch (fallbackErr: any) {
+          return rejectWithValue(
+            fallbackErr.response?.data?.message || "Invalid or expired verification code."
+          );
+        }
+      }
       return rejectWithValue(
         err.response?.data?.message || "Invalid or expired verification code."
       );
