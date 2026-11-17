@@ -4,33 +4,35 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Product } from "@/types/product";
 import { ProductCard } from "@/components/products/ProductCard";
-import { getFeaturedAds } from "@/lib/advertisementApi";
 import { Flame, ArrowRight } from "lucide-react";
+import { getFeaturedAds } from "@/lib/advertisementApi";
 
 interface FeaturedListingsProps {
   products: Product[];
 }
 
-export function FeaturedListings({ products }: FeaturedListingsProps) {
-  const [liveFeatured, setLiveFeatured] = useState<Product[]>([]);
+export function FeaturedListings({ products: initialProducts }: FeaturedListingsProps) {
+  const [products, setProducts] = useState<Product[]>(initialProducts);
 
   useEffect(() => {
     let isMounted = true;
-    getFeaturedAds(8)
-      .then((ads) => {
-        if (isMounted && ads && ads.length > 0) {
-          setLiveFeatured(ads);
+    async function loadFeatured() {
+      try {
+        const live = await getFeaturedAds(8);
+        if (isMounted && live.length > 0) {
+          setProducts(live);
         }
-      })
-      .catch(() => {});
+      } catch {
+        // Fallback to initial products
+      }
+    }
+    loadFeatured();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const displayProducts = liveFeatured.length > 0 ? liveFeatured : products;
-
-  if (displayProducts.length === 0) return null;
+  if (products.length === 0) return null;
 
   return (
     <section className="my-10 p-6 sm:p-8 bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent rounded-3xl border border-orange-200/60 space-y-6">
@@ -59,7 +61,7 @@ export function FeaturedListings({ products }: FeaturedListingsProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-        {displayProducts.slice(0, 4).map((product) => (
+        {products.slice(0, 4).map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

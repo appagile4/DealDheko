@@ -1,14 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api-backend/:path*",
-        destination: "https://api.dealdoko.com/api/:path*",
-      },
-    ];
-  },
   images: {
     remotePatterns: [
       {
@@ -21,11 +13,15 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "www.dealdoko.com",
+        hostname: "*.dealdoko.com",
       },
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.cloudinary.com",
       },
       {
         protocol: "https",
@@ -64,6 +60,14 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/api/proxy/:path*",
+        destination: "https://api.dealdoko.com/api/:path*",
+      },
+    ];
   },
 };
 

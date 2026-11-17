@@ -23,7 +23,7 @@ export const getSocket = (): Socket => {
       query: {
         token,
       },
-      transports: ["polling", "websocket"],
+      transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,

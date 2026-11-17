@@ -1,16 +1,17 @@
 import axios from "axios";
 
-// When running in a browser on localhost or local LAN, route requests through Next.js proxy
-// to bypass browser CORS restrictions while connecting to the live production API.
-const isLocalBrowser =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1" ||
-    window.location.hostname.startsWith("192.168."));
+// Resolve API base URL: Use Next.js server rewrite proxy on localhost to avoid CORS restrictions
+const getBaseUrl = (): string => {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return "/api/proxy";
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "https://api.dealdoko.com/api";
+};
 
-export const API_URL = isLocalBrowser
-  ? "/api-backend"
-  : (process.env.NEXT_PUBLIC_API_URL || "https://api.dealdoko.com/api");
+export const API_URL = getBaseUrl();
 
 export const api = axios.create({
   baseURL: API_URL,
