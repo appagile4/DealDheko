@@ -1,5 +1,11 @@
 import express from "express";
 import {
+  googleAuth,
+  sendEmailOtp,
+  verifyEmailOtp,
+  setEmailPassword,
+  sendPhoneOtp,
+  verifyPhoneOtp,
   signup,
   verifyOtp,
   resendOtp,
@@ -14,6 +20,25 @@ import { uploadSingleImage } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
+// ============================================================================
+// Unified Authentication Endpoints
+// ============================================================================
+
+// Google OAuth
+router.post("/google", googleAuth);
+
+// Email OTP Flow
+router.post("/email/send-otp", sendEmailOtp);
+router.post("/email/verify-otp", verifyEmailOtp);
+router.post("/email/set-password", setEmailPassword);
+
+// Phone OTP Flow (Passwordless)
+router.post("/phone/send-otp", sendPhoneOtp);
+router.post("/phone/verify-otp", verifyPhoneOtp);
+
+// ============================================================================
+// Legacy Backward-Compatible Endpoints
+// ============================================================================
 router.post("/signup", signup);
 router.post("/verify-otp", verifyOtp);
 router.post("/resend-otp", resendOtp);
