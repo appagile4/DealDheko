@@ -101,6 +101,11 @@ export const AuthModal: React.FC = () => {
     webClientId:
       "882363919027-55u63mhmlrtmd4jtko8icqk91fm01e85.apps.googleusercontent.com",
     scopes: ["profile", "email"],
+    redirectUri: Platform.select({
+      ios: "com.googleusercontent.apps.882363919027-cpvtr5pemi2bn67mfb823ipusu60m8q3:/oauthredirect",
+      android: "com.googleusercontent.apps.882363919027-g1cv9i0tks94lq5s5n87bmvsjtuohv4i:/oauthredirect",
+      default: undefined,
+    }),
   });
 
   useEffect(() => {
