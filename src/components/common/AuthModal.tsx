@@ -258,7 +258,7 @@ export const AuthModal: React.FC = () => {
       setEmailCountdown(60);
       setMode("email_otp");
     } catch (err: any) {
-      setLocalError(err.response?.data?.message || "Failed to send email OTP.");
+      setLocalError(err.response?.data?.message || err.message || "Failed to send email OTP.");
     } finally {
       setLoading(false);
     }

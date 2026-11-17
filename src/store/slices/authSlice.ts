@@ -83,7 +83,14 @@ export const loginWithGoogle = createAsyncThunk(
       }
       return rejectWithValue("Failed to retrieve user data from Google");
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Google authentication failed");
+      return rejectWithValue(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        (err.message === "Network Error"
+          ? "Network Error: Could not connect to API server. Please reload the app."
+          : err.message) ||
+        "Google authentication failed"
+      );
     }
   }
 );
@@ -102,7 +109,14 @@ export const verifyPhoneOtpThunk = createAsyncThunk(
       }
       return rejectWithValue("Failed to retrieve authentication token");
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Invalid or expired SMS OTP");
+      return rejectWithValue(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        (err.message === "Network Error"
+          ? "Network Error: Could not connect to API server. Please reload the app."
+          : err.message) ||
+        "Invalid or expired SMS OTP"
+      );
     }
   }
 );
@@ -125,7 +139,14 @@ export const verifyEmailOtpThunk = createAsyncThunk(
       }
       return rejectWithValue("Verification response incomplete");
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Email verification failed");
+      return rejectWithValue(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        (err.message === "Network Error"
+          ? "Network Error: Could not connect to API server. Please reload the app."
+          : err.message) ||
+        "Email verification failed"
+      );
     }
   }
 );
