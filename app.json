@@ -16,6 +16,7 @@
           {
             "CFBundleURLSchemes": [
               "com.googleusercontent.apps.882363919027-cpvtr5pemi2bn67mfb823ipusu60m8q3",
+              "dealdoko",
               "dealdheko"
             ]
           }
@@ -27,13 +28,15 @@
       "intentFilters": [
         {
           "action": "VIEW",
-          "autoVerify": true,
           "data": [
             {
               "scheme": "com.googleusercontent.apps.882363919027-g1cv9i0tks94lq5s5n87bmvsjtuohv4i"
             },
             {
               "scheme": "dealdoko"
+            },
+            {
+              "scheme": "dealdheko"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]

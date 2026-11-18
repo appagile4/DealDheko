@@ -109,8 +109,10 @@ export const AuthModal: React.FC = () => {
     }),
   });
 
+  const isAuthenticatingRef = React.useRef(false);
+
   useEffect(() => {
-    if (response?.type === "success") {
+    if (response?.type === "success" && !isAuthenticatingRef.current) {
       handleGoogleAuthSuccess(response);
     } else if (response?.type === "error") {
       setLocalError(
@@ -121,6 +123,8 @@ export const AuthModal: React.FC = () => {
   }, [response]);
 
   const handleGoogleAuthSuccess = async (authResponse: any) => {
+    if (isAuthenticatingRef.current) return;
+    isAuthenticatingRef.current = true;
     setLoading(true);
     setLocalError(null);
     try {
@@ -174,6 +178,7 @@ export const AuthModal: React.FC = () => {
       setLocalError(err || "Google sign-in could not be completed.");
     } finally {
       setLoading(false);
+      isAuthenticatingRef.current = false;
     }
   };
 
@@ -182,16 +187,13 @@ export const AuthModal: React.FC = () => {
     setLoading(true);
     setLocalError(null);
     try {
-      if (!request) {
-        // Fallback prompt
-        const res = await promptAsync();
-        if (res.type !== "success") {
-          setLoading(false);
-        }
-        return;
-      }
       const res = await promptAsync();
-      if (res.type !== "success") {
+      if (res.type === "success") {
+        await handleGoogleAuthSuccess(res);
+      } else if (res.type === "error") {
+        setLoading(false);
+        setLocalError(res.error?.message || "Failed to launch Google Sign-In.");
+      } else {
         setLoading(false);
       }
     } catch (err: any) {
