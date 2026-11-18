@@ -20,6 +20,7 @@ import {
 import { THEME } from "../../constants/theme";
 import { authApi } from "../../services/api";
 import googleAuthService from "../../services/googleAuth";
+import { LegalModal, LegalModalType } from "./LegalModal";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   clearAuthError,
@@ -47,6 +48,10 @@ export const AuthModal: React.FC = () => {
   const [mode, setMode] = useState<AuthMode>("initial");
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Legal modal state (Terms of Use & Privacy Policy)
+  const [legalModalVisible, setLegalModalVisible] = useState(false);
+  const [legalType, setLegalType] = useState<LegalModalType>("terms");
 
   // Phone flow
   const [phoneNumber, setPhoneNumber] = useState("+977 ");
@@ -824,8 +829,26 @@ export const AuthModal: React.FC = () => {
                 <View style={styles.footerArea}>
                   <Text style={styles.termsText}>
                     By continuing, you agree to DealDoko's{" "}
-                    <Text style={styles.termsLink}>Terms of Use</Text> and{" "}
-                    <Text style={styles.termsLink}>Privacy Policy</Text>.
+                    <Text
+                      style={styles.termsLink}
+                      onPress={() => {
+                        setLegalType("terms");
+                        setLegalModalVisible(true);
+                      }}
+                    >
+                      Terms of Use
+                    </Text>{" "}
+                    and{" "}
+                    <Text
+                      style={styles.termsLink}
+                      onPress={() => {
+                        setLegalType("privacy");
+                        setLegalModalVisible(true);
+                      }}
+                    >
+                      Privacy Policy
+                    </Text>
+                    .
                   </Text>
                 </View>
               </ScrollView>
@@ -833,6 +856,13 @@ export const AuthModal: React.FC = () => {
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
+
+      {/* Terms of Use and Privacy Policy Modal */}
+      <LegalModal
+        visible={legalModalVisible}
+        initialType={legalType}
+        onClose={() => setLegalModalVisible(false)}
+      />
     </KeyboardAvoidingView>
   </Modal>
   );
