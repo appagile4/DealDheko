@@ -5,7 +5,7 @@ const auditLogSchema = new mongoose.Schema(
     admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
       index: true,
     },
     action: {
@@ -17,6 +17,7 @@ const auditLogSchema = new mongoose.Schema(
         "ad_deleted",
         "user_suspended",
         "user_activated",
+        "user_deleted",
       ],
       required: true,
       index: true,

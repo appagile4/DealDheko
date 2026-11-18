@@ -2,7 +2,12 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/User.js";
 import Otp from "../models/Otp.js";
-import { sendOtpEmail } from "../config/nodemailer.js";
+import Advertisement from "../models/Advertisement.js";
+import Conversation from "../models/Conversation.js";
+import Message from "../models/Message.js";
+import Notification from "../models/Notification.js";
+import AuditLog from "../models/AuditLog.js";
+import { sendOtpEmail, sendAccountDeletionEmail } from "../config/nodemailer.js";
 import { sendOtpSms } from "../config/sms.js";
 import { uploadToCloudinary } from "../config/cloudinary.js";
 
@@ -1102,6 +1107,217 @@ export const uploadAvatar = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to upload profile image to Cloudinary.",
+    });
+  }
+};
+
+/**
+ * @desc    Request 6-digit OTP code to verify and authorize permanent account deletion
+ * @route   POST /api/auth/delete-account/send-otp
+ * @access  Public / Protected (can be called logged in or logged out with email)
+ */
+export const requestDeleteAccountOtp = async (req, res) => {
+  try {
+    const rawEmail = req.body?.email || req.user?.email || "";
+    const cleanEmail = rawEmail.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Registered email address is required.",
+      });
+    }
+
+    // Verify that the user actually exists in database
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No DealDoko account found with this email address.",
+      });
+    }
+
+    // Rate-limit: Check if an OTP was sent in the last 60 seconds
+    const recentOtp = await Otp.findOne({
+      identifier: cleanEmail,
+      type: "account_deletion",
+      createdAt: { $gt: new Date(Date.now() - 60 * 1000) },
+    });
+
+    if (recentOtp) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait 60 seconds before requesting another verification code.",
+      });
+    }
+
+    // Clear previous unverified deletion OTPs for this email
+    await Otp.deleteMany({
+      identifier: cleanEmail,
+      type: "account_deletion",
+    });
+
+    // Generate 6-digit cryptographic OTP code
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    await Otp.create({
+      identifier: cleanEmail,
+      otp,
+      type: "account_deletion",
+      expiresAt,
+    });
+
+    // Send email with security warning
+    const emailResult = await sendAccountDeletionEmail(cleanEmail, otp, user.name || "DealDoko Member");
+
+    if (!emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send deletion verification code email. Please try again.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Verification code sent to ${cleanEmail}. Valid for 5 minutes.`,
+    });
+  } catch (error) {
+    console.error("Account Deletion Send OTP Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to process account deletion request.",
+    });
+  }
+};
+
+/**
+ * @desc    Confirm OTP, record deletion reason, and permanently delete account and all cascading data
+ * @route   POST /api/auth/delete-account/confirm
+ * @access  Public / Protected
+ */
+export const confirmDeleteAccount = async (req, res) => {
+  try {
+    const rawEmail = req.body?.email || req.user?.email || "";
+    const cleanEmail = rawEmail.trim().toLowerCase();
+    const cleanOtp = (req.body?.otp || "").toString().trim();
+    const reason = (req.body?.reason || "Not specified").trim();
+    const reasonDetails = (req.body?.reasonDetails || "").trim();
+
+    if (!cleanEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Registered email address is required.",
+      });
+    }
+
+    if (!cleanOtp || cleanOtp.length !== 6) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid 6-digit verification code is required.",
+      });
+    }
+
+    // 1. Locate User
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Account not found or already deleted.",
+      });
+    }
+
+    // 2. Validate OTP
+    const otpDoc = await Otp.findOne({
+      identifier: cleanEmail,
+      otp: cleanOtp,
+      type: "account_deletion",
+      expiresAt: { $gt: new Date() },
+      isVerified: false,
+    });
+
+    if (!otpDoc) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification code. Please request a new one.",
+      });
+    }
+
+    const userId = user._id;
+
+    // 3. Cascade Delete: Advertisements posted by user
+    const deletedAds = await Advertisement.deleteMany({ seller: userId });
+
+    // 4. Cascade Delete: Messages sent or received by user
+    const deletedMessages = await Message.deleteMany({
+      $or: [{ sender: userId }, { recipient: userId }],
+    });
+
+    // 5. Cascade Delete: Conversations involving user
+    const deletedConversations = await Conversation.deleteMany({
+      participants: userId,
+    });
+
+    // 6. Cascade Delete: Notifications for or from user
+    const deletedNotifications = await Notification.deleteMany({
+      $or: [{ recipient: userId }, { sender: userId }],
+    });
+
+    // 7. Cascade Delete: All OTP records associated with user's email or phone
+    const identifiers = [cleanEmail];
+    if (user.phone) identifiers.push(user.phone);
+    await Otp.deleteMany({ identifier: { $in: identifiers } });
+
+    // 8. Record audit trail before deleting user document
+    try {
+      await AuditLog.create({
+        action: "user_deleted",
+        targetType: "user",
+        targetId: userId,
+        metadata: {
+          userName: user.name,
+          userEmail: user.email,
+          userPhone: user.phone,
+          authProvider: user.authProvider,
+          reason,
+          reasonDetails,
+          deletedAdsCount: deletedAds.deletedCount || 0,
+          deletedMessagesCount: deletedMessages.deletedCount || 0,
+          deletedConversationsCount: deletedConversations.deletedCount || 0,
+          deletedNotificationsCount: deletedNotifications.deletedCount || 0,
+          deletedAt: new Date().toISOString(),
+          ip: req.ip || req.headers["x-forwarded-for"] || "unknown",
+          userAgent: req.headers["user-agent"] || "unknown",
+        },
+      });
+    } catch (auditErr) {
+      console.warn("AuditLog creation warning during account deletion:", auditErr.message);
+    }
+
+    // 9. Permanently Delete User document
+    await User.findByIdAndDelete(userId);
+
+    // 10. Clear Authentication Cookies
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Your DealDoko account and all associated data have been permanently deleted.",
+      details: {
+        adsDeleted: deletedAds.deletedCount || 0,
+        messagesDeleted: deletedMessages.deletedCount || 0,
+        conversationsDeleted: deletedConversations.deletedCount || 0,
+      },
+    });
+  } catch (error) {
+    console.error("Account Deletion Confirmation Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to confirm account deletion.",
     });
   }
 };

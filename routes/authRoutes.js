@@ -14,6 +14,8 @@ import {
   getMe,
   updateProfile,
   uploadAvatar,
+  requestDeleteAccountOtp,
+  confirmDeleteAccount,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { uploadSingleImage } from "../middleware/uploadMiddleware.js";
@@ -49,5 +51,11 @@ router.post("/logout", logout);
 router.get("/me", protect, getMe);
 router.put("/profile", protect, updateProfile);
 router.post("/avatar", protect, uploadSingleImage, uploadAvatar);
+
+// ============================================================================
+// Account & Data Deletion Flow (Self-Service & App Store Compliant)
+// ============================================================================
+router.post("/delete-account/send-otp", requestDeleteAccountOtp);
+router.post("/delete-account/confirm", confirmDeleteAccount);
 
 export default router;
