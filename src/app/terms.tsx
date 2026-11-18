@@ -44,6 +44,7 @@ export default function TermsOfUseScreen() {
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
+        style={{ flex: 1, backgroundColor: THEME.colors.background }}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Hero Card */}
@@ -270,7 +271,7 @@ export default function TermsOfUseScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.surface,
   },
   header: {
     flexDirection: "row",

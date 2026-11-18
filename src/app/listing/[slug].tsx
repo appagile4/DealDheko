@@ -159,6 +159,7 @@ export default function ListingDetailScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={{ flex: 1, backgroundColor: THEME.colors.background }}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Photo Gallery Carousel */}
@@ -321,7 +322,7 @@ export default function ListingDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.surface,
   },
   loadingContainer: {
     flex: 1,

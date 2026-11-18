@@ -345,7 +345,7 @@ export default function ChatRoomScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: THEME.colors.surface,
   },
   header: {
     flexDirection: "row",

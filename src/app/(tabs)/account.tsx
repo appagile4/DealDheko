@@ -42,6 +42,7 @@ export default function AccountScreen() {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
+          style={{ flex: 1, backgroundColor: THEME.colors.background }}
           contentContainerStyle={styles.guestContainer}
         >
           <View style={styles.guestAvatar}>
@@ -149,6 +150,7 @@ export default function AccountScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={{ flex: 1, backgroundColor: THEME.colors.background }}
         contentContainerStyle={styles.contentList}
       >
         {/* Profile Card */}
@@ -424,7 +426,7 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.surface,
   },
   header: {
     flexDirection: "row",

@@ -28,6 +28,7 @@ export default function FavouritesScreen() {
       <FlatList
         data={favouriteItems}
         keyExtractor={(item) => item._id}
+        style={{ flex: 1, backgroundColor: THEME.colors.background }}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.listContent}
@@ -57,7 +58,7 @@ export default function FavouritesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.surface,
   },
   header: {
     flexDirection: "row",

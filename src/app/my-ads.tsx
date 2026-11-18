@@ -151,6 +151,7 @@ export default function MyAdsScreen() {
       <FlatList
         data={filteredAds}
         keyExtractor={(item) => item._id}
+        style={{ flex: 1, backgroundColor: THEME.colors.background }}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
@@ -258,7 +259,7 @@ export default function MyAdsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.surface,
   },
   header: {
     flexDirection: "row",

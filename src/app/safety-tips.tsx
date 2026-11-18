@@ -89,7 +89,11 @@ export default function SafetyTipsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1, backgroundColor: THEME.colors.background }}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Hero Card */}
         <View style={styles.heroCard}>
           <View style={styles.badgeRow}>
@@ -228,7 +232,7 @@ export default function SafetyTipsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.surface,
   },
   header: {
     flexDirection: "row",

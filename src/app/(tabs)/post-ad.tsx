@@ -255,6 +255,7 @@ export default function PostAdScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={{ flex: 1, backgroundColor: THEME.colors.background }}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Step 1: Photos */}
@@ -459,7 +460,7 @@ export default function PostAdScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.surface,
   },
   topHeader: {
     paddingHorizontal: 20,
