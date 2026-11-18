@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import storage from "../../services/storage";
 import { AdvertisementItem } from "./listingsSlice";
 
 interface FavouritesState {
@@ -17,8 +17,8 @@ const initialState: FavouritesState = {
 // Load saved favourites from storage
 export const loadFavourites = createAsyncThunk("favourites/load", async () => {
   try {
-    const rawIds = await AsyncStorage.getItem("dealdheko_favourite_ids");
-    const rawItems = await AsyncStorage.getItem("dealdheko_favourite_items");
+    const rawIds = await storage.getItem("dealdoko_favourite_ids") || await storage.getItem("dealdheko_favourite_ids");
+    const rawItems = await storage.getItem("dealdoko_favourite_items") || await storage.getItem("dealdheko_favourite_items");
     return {
       ids: rawIds ? JSON.parse(rawIds) : [],
       items: rawItems ? JSON.parse(rawItems) : [],
@@ -46,8 +46,8 @@ export const toggleFavouriteThunk = createAsyncThunk(
       nextItems = [item, ...state.favourites.favouriteItems];
     }
 
-    await AsyncStorage.setItem("dealdheko_favourite_ids", JSON.stringify(nextIds));
-    await AsyncStorage.setItem("dealdheko_favourite_items", JSON.stringify(nextItems));
+    await storage.setItem("dealdoko_favourite_ids", JSON.stringify(nextIds));
+    await storage.setItem("dealdoko_favourite_items", JSON.stringify(nextItems));
 
     return { ids: nextIds, items: nextItems };
   }

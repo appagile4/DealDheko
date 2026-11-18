@@ -14,7 +14,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { searchListingsThunk, clearSearchResults } from "../store/slices/listingsSlice";
+import {
+  searchListingsThunk,
+  clearSearchResults,
+} from "../store/slices/listingsSlice";
 import { ProductCard } from "../components/common/ProductCard";
 import { CATEGORIES } from "../constants/categories";
 import { THEME } from "../constants/theme";
@@ -22,7 +25,13 @@ import { THEME } from "../constants/theme";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - 44) / 2;
 
-const RECENT_SEARCHES = ["iPhone 15", "Royal Enfield", "Kathmandu Apartment", "MacBook Air", "Pulsar 220"];
+const RECENT_SEARCHES = [
+  "iPhone 15",
+  "Royal Enfield",
+  "Kathmandu Apartment",
+  "MacBook Air",
+  "Pulsar 220",
+];
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -30,9 +39,13 @@ export default function SearchScreen() {
   const params = useLocalSearchParams<{ q?: string; category?: string }>();
 
   const [query, setQuery] = useState(params.q || "");
-  const [activeCategory, setActiveCategory] = useState(params.category || "all");
+  const [activeCategory, setActiveCategory] = useState(
+    params.category || "all",
+  );
   const selectedCity = useAppSelector((state) => state.location.selectedCity);
-  const { searchResults, isSearching } = useAppSelector((state) => state.listings);
+  const { searchResults, isSearching } = useAppSelector(
+    (state) => state.listings,
+  );
 
   useEffect(() => {
     if (params.q || params.category) {
@@ -41,7 +54,7 @@ export default function SearchScreen() {
           q: params.q,
           category: params.category,
           city: selectedCity,
-        })
+        }),
       );
     }
     return () => {
@@ -56,7 +69,7 @@ export default function SearchScreen() {
         q: searchQuery.trim(),
         category: activeCategory !== "all" ? activeCategory : undefined,
         city: selectedCity,
-      })
+      }),
     );
   };
 
@@ -69,32 +82,47 @@ export default function SearchScreen() {
         </TouchableOpacity>
 
         <View style={styles.inputWrap}>
-          <Ionicons name="search-outline" size={18} color={THEME.colors.textMuted} />
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={THEME.colors.textMuted}
+          />
           <TextInput
             style={styles.input}
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={() => handleSearch()}
-            placeholder="Search in DealDheko..."
+            placeholder="Search in DealDoko..."
             placeholderTextColor={THEME.colors.textMuted}
             returnKeyType="search"
             autoFocus={!params.q}
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery("")}>
-              <Ionicons name="close-circle" size={18} color={THEME.colors.textMuted} />
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color={THEME.colors.textMuted}
+              />
             </TouchableOpacity>
           )}
         </View>
 
-        <TouchableOpacity style={styles.searchActionBtn} onPress={() => handleSearch()}>
+        <TouchableOpacity
+          style={styles.searchActionBtn}
+          onPress={() => handleSearch()}
+        >
           <Text style={styles.searchActionText}>Search</Text>
         </TouchableOpacity>
       </View>
 
       {/* Category Filter Chips */}
       <View style={styles.categoryChipsBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScroll}
+        >
           <TouchableOpacity
             style={[styles.chip, activeCategory === "all" && styles.activeChip]}
             onPress={() => {
@@ -102,7 +130,12 @@ export default function SearchScreen() {
               handleSearch();
             }}
           >
-            <Text style={[styles.chipText, activeCategory === "all" && styles.activeChipText]}>
+            <Text
+              style={[
+                styles.chipText,
+                activeCategory === "all" && styles.activeChipText,
+              ]}
+            >
               All
             </Text>
           </TouchableOpacity>
@@ -110,14 +143,22 @@ export default function SearchScreen() {
           {CATEGORIES.map((cat) => (
             <TouchableOpacity
               key={cat.id}
-              style={[styles.chip, activeCategory === cat.slug && styles.activeChip]}
+              style={[
+                styles.chip,
+                activeCategory === cat.slug && styles.activeChip,
+              ]}
               onPress={() => {
                 const next = activeCategory === cat.slug ? "all" : cat.slug;
                 setActiveCategory(next);
                 handleSearch();
               }}
             >
-              <Text style={[styles.chipText, activeCategory === cat.slug && styles.activeChipText]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  activeCategory === cat.slug && styles.activeChipText,
+                ]}
+              >
                 {cat.name}
               </Text>
             </TouchableOpacity>
@@ -139,7 +180,11 @@ export default function SearchScreen() {
                   handleSearch(tag);
                 }}
               >
-                <Ionicons name="trending-up" size={14} color={THEME.colors.primary} />
+                <Ionicons
+                  name="trending-up"
+                  size={14}
+                  color={THEME.colors.primary}
+                />
                 <Text style={styles.tagText}>{tag}</Text>
               </TouchableOpacity>
             ))}
@@ -152,20 +197,35 @@ export default function SearchScreen() {
           numColumns={2}
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.resultsContent}
-          renderItem={({ item }) => <ProductCard item={item} width={CARD_WIDTH} />}
+          renderItem={({ item }) => (
+            <ProductCard item={item} width={CARD_WIDTH} />
+          )}
           ListHeaderComponent={
             <Text style={styles.resultsCount}>
-              Found {searchResults.length} {searchResults.length === 1 ? "result" : "results"} in {selectedCity}
+              Found {searchResults.length}{" "}
+              {searchResults.length === 1 ? "result" : "results"} in{" "}
+              {selectedCity}
             </Text>
           }
           ListEmptyComponent={
             isSearching ? (
-              <ActivityIndicator style={{ marginTop: 40 }} size="large" color={THEME.colors.primary} />
+              <ActivityIndicator
+                style={{ marginTop: 40 }}
+                size="large"
+                color={THEME.colors.primary}
+              />
             ) : (
               <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={48} color={THEME.colors.textMuted} />
+                <Ionicons
+                  name="search-outline"
+                  size={48}
+                  color={THEME.colors.textMuted}
+                />
                 <Text style={styles.emptyTitle}>No matching items found</Text>
-                <Text style={styles.emptySubtitle}>Try searching with different keywords or browse other categories.</Text>
+                <Text style={styles.emptySubtitle}>
+                  Try searching with different keywords or browse other
+                  categories.
+                </Text>
               </View>
             )
           }

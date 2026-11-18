@@ -35,9 +35,11 @@ export default function ChatRoomScreen() {
 
   const user = useAppSelector((state) => state.auth.user);
   const conversation = useAppSelector((state) =>
-    state.chat.conversations.find((c) => c._id === id)
+    state.chat.conversations.find((c) => c._id === id),
   );
-  const messages = useAppSelector((state) => (id ? state.chat.messages[id] || [] : []));
+  const messages = useAppSelector((state) =>
+    id ? state.chat.messages[id] || [] : [],
+  );
   const isLoading = useAppSelector((state) => state.chat.isLoadingMessages);
 
   const [inputText, setInputText] = useState("");
@@ -95,9 +97,13 @@ export default function ChatRoomScreen() {
 
   const handlePickAttachment = async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Permission Required", "Please allow photo library access to send images.");
+        Alert.alert(
+          "Permission Required",
+          "Please allow photo library access to send images.",
+        );
         return;
       }
 
@@ -128,7 +134,7 @@ export default function ChatRoomScreen() {
                 conversationId: id,
                 text: "Sent an attachment",
                 attachment: uploadRes.data.attachment,
-              })
+              }),
             ).unwrap();
           }
         } catch (err) {
@@ -168,7 +174,7 @@ export default function ChatRoomScreen() {
           <Text style={styles.partnerName} numberOfLines={1}>
             {otherUser?.name || "Customer"}
           </Text>
-          <Text style={styles.onlineStatus}>Active on DealDheko</Text>
+          <Text style={styles.onlineStatus}>Active on DealDoko</Text>
         </View>
       </View>
 
@@ -199,10 +205,15 @@ export default function ChatRoomScreen() {
               {conversation.advertisement.title}
             </Text>
             <Text style={styles.adBannerPrice}>
-              Rs. {Number(conversation.advertisement.price).toLocaleString("en-IN")}
+              Rs.{" "}
+              {Number(conversation.advertisement.price).toLocaleString("en-IN")}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={THEME.colors.textMuted} />
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={THEME.colors.textMuted}
+          />
         </TouchableOpacity>
       )}
 
@@ -216,7 +227,9 @@ export default function ChatRoomScreen() {
           data={messages}
           keyExtractor={(item) => item._id || Math.random().toString()}
           contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: false })
+          }
           renderItem={({ item }) => {
             const isMe = item.sender?._id === user?._id;
 
@@ -237,12 +250,22 @@ export default function ChatRoomScreen() {
                 )}
 
                 {item.text && item.text !== "Sent an attachment" && (
-                  <Text style={[styles.bubbleText, isMe ? styles.myText : styles.theirText]}>
+                  <Text
+                    style={[
+                      styles.bubbleText,
+                      isMe ? styles.myText : styles.theirText,
+                    ]}
+                  >
                     {item.text}
                   </Text>
                 )}
 
-                <Text style={[styles.timeText, isMe ? styles.myTime : styles.theirTime]}>
+                <Text
+                  style={[
+                    styles.timeText,
+                    isMe ? styles.myTime : styles.theirTime,
+                  ]}
+                >
                   {new Date(item.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -254,22 +277,39 @@ export default function ChatRoomScreen() {
           ListEmptyComponent={
             !isLoading ? (
               <View style={styles.emptyMessages}>
-                <Ionicons name="shield-checkmark" size={36} color={THEME.colors.primary} />
-                <Text style={styles.emptyPromptTitle}>Safe In-App Messaging</Text>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={36}
+                  color={THEME.colors.primary}
+                />
+                <Text style={styles.emptyPromptTitle}>
+                  Safe In-App Messaging
+                </Text>
                 <Text style={styles.emptyPromptSubtitle}>
-                  Negotiate directly, ask questions about the item, and arrange safe public meetings. Never send advance payment.
+                  Negotiate directly, ask questions about the item, and arrange
+                  safe public meetings. Never send advance payment.
                 </Text>
               </View>
             ) : (
-              <ActivityIndicator style={{ marginTop: 24 }} color={THEME.colors.primary} />
+              <ActivityIndicator
+                style={{ marginTop: 24 }}
+                color={THEME.colors.primary}
+              />
             )
           }
         />
 
         {/* Input Bar */}
         <View style={styles.inputContainer}>
-          <TouchableOpacity style={styles.attachBtn} onPress={handlePickAttachment}>
-            <Ionicons name="camera-outline" size={24} color={THEME.colors.textSecondary} />
+          <TouchableOpacity
+            style={styles.attachBtn}
+            onPress={handlePickAttachment}
+          >
+            <Ionicons
+              name="camera-outline"
+              size={24}
+              color={THEME.colors.textSecondary}
+            />
           </TouchableOpacity>
 
           <TextInput

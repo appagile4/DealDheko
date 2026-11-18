@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "DealDheko",
-    "slug": "dealdheko-customer",
+    "name": "DealDoko",
+    "slug": "dealdoko-customer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "dealdheko",
+    "scheme": "dealdoko",
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.agileinvent.dealdheko",
@@ -33,13 +33,10 @@
               "scheme": "com.googleusercontent.apps.882363919027-g1cv9i0tks94lq5s5n87bmvsjtuohv4i"
             },
             {
-              "scheme": "dealdheko"
+              "scheme": "dealdoko"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ],
       "adaptiveIcon": {

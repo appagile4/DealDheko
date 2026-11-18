@@ -1,13 +1,13 @@
 export const THEME = {
   colors: {
-    primary: "#0047BA", // DealDheko Blue
+    primary: "#0047BA", // DealDoko Blue
     primaryDark: "#002F87",
     primaryLight: "#EEF4FC",
-    accent: "#FF6A00", // DealDheko Action Orange
+    accent: "#FF6A00", // DealDoko Action Orange
     accentDark: "#E05A00",
     accentLight: "#FFF3EB",
     navy: "#00225E",
-    
+
     // Status colors
     success: "#10B981",
     successLight: "#ECFDF5",

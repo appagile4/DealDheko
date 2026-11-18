@@ -1,5 +1,5 @@
 import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import storage from "./storage";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
@@ -7,7 +7,7 @@ import { Platform } from "react-native";
 export const API_BASE_URL = "https://api.dealdoko.com/api";
 export const SOCKET_URL = "https://api.dealdoko.com";
 
-console.log("[DealDheko] Configured API Base URL:", API_BASE_URL);
+console.log("[DealDoko] Configured API Base URL:", API_BASE_URL);
 
 // Create Axios Instance
 export const apiClient = axios.create({
@@ -22,7 +22,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem("dealdheko_auth_token");
+      const token = await storage.getItem("dealdoko_auth_token");
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -31,7 +31,7 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Response Interceptor: Handle errors
@@ -41,12 +41,12 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid
       try {
-        await AsyncStorage.removeItem("dealdheko_auth_token");
-        await AsyncStorage.removeItem("dealdheko_user");
+        await storage.removeItem("dealdoko_auth_token");
+        await storage.removeItem("dealdoko_user");
       } catch (e) {}
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // ============================================================================
@@ -55,8 +55,13 @@ apiClient.interceptors.response.use(
 
 export const authApi = {
   // Google OAuth
-  googleAuth: (data: { credential?: string; idToken?: string; accessToken?: string; code?: string; userInfo?: any }) =>
-    apiClient.post("/auth/google", data),
+  googleAuth: (data: {
+    credential?: string;
+    idToken?: string;
+    accessToken?: string;
+    code?: string;
+    userInfo?: any;
+  }) => apiClient.post("/auth/google", data),
 
   // Email OTP Flow
   sendEmailOtp: (email: string) =>
@@ -84,8 +89,12 @@ export const authApi = {
 
   // Current User Profile
   getMe: () => apiClient.get("/auth/me"),
-  updateProfile: (data: { name?: string; phone?: string; about?: string; city?: string }) =>
-    apiClient.put("/auth/profile", data),
+  updateProfile: (data: {
+    name?: string;
+    phone?: string;
+    about?: string;
+    city?: string;
+  }) => apiClient.put("/auth/profile", data),
   uploadAvatar: (formData: FormData) =>
     apiClient.post("/auth/avatar", formData, {
       headers: { "Content-Type": "multipart/form-data" },
@@ -110,29 +119,29 @@ export const listingsApi = {
     apiClient.get("/advertisements/featured", { params: { limit } }),
 
   // Full Text Search
-  search: (params: { q?: string; city?: string; category?: string; page?: number; limit?: number }) =>
-    apiClient.get("/advertisements/search", { params }),
+  search: (params: {
+    q?: string;
+    city?: string;
+    category?: string;
+    page?: number;
+    limit?: number;
+  }) => apiClient.get("/advertisements/search", { params }),
 
   // Single Listing Detail
-  getBySlug: (slug: string) =>
-    apiClient.get(`/advertisements/slug/${slug}`),
+  getBySlug: (slug: string) => apiClient.get(`/advertisements/slug/${slug}`),
 
   // Related Listings
-  getRelated: (id: string) =>
-    apiClient.get(`/advertisements/${id}/related`),
+  getRelated: (id: string) => apiClient.get(`/advertisements/${id}/related`),
 
   // Seller Protected Actions
-  create: (data: any) =>
-    apiClient.post("/advertisements", data),
+  create: (data: any) => apiClient.post("/advertisements", data),
 
-  getMyAds: () =>
-    apiClient.get("/advertisements/my"),
+  getMyAds: () => apiClient.get("/advertisements/my"),
 
   update: (id: string, data: any) =>
     apiClient.put(`/advertisements/${id}`, data),
 
-  delete: (id: string) =>
-    apiClient.delete(`/advertisements/${id}`),
+  delete: (id: string) => apiClient.delete(`/advertisements/${id}`),
 };
 
 export const chatApi = {
@@ -140,18 +149,22 @@ export const chatApi = {
   getOrCreateConversation: (advertisementId: string) =>
     apiClient.post("/chat/conversations", { advertisementId }),
 
-  getConversations: () =>
-    apiClient.get("/chat/conversations"),
+  getConversations: () => apiClient.get("/chat/conversations"),
 
   getConversationById: (id: string) =>
     apiClient.get(`/chat/conversations/${id}`),
 
   // Messages
   getMessages: (conversationId: string, page = 1, limit = 50) =>
-    apiClient.get(`/chat/conversations/${conversationId}/messages`, { params: { page, limit } }),
+    apiClient.get(`/chat/conversations/${conversationId}/messages`, {
+      params: { page, limit },
+    }),
 
   sendMessage: (conversationId: string, text: string, attachment?: any) =>
-    apiClient.post(`/chat/conversations/${conversationId}/messages`, { text, attachment }),
+    apiClient.post(`/chat/conversations/${conversationId}/messages`, {
+      text,
+      attachment,
+    }),
 
   markRead: (conversationId: string) =>
     apiClient.put(`/chat/conversations/${conversationId}/read`),

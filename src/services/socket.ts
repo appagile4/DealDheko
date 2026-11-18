@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import storage from "./storage";
 import { SOCKET_URL } from "./api";
 
 let socket: Socket | null = null;
@@ -9,7 +9,9 @@ export const initSocket = async (): Promise<Socket> => {
     return socket;
   }
 
-  const token = await AsyncStorage.getItem("dealdheko_auth_token");
+  const token =
+    (await storage.getItem("dealdoko_auth_token")) ||
+    (await storage.getItem("dealdheko_auth_token"));
 
   socket = io(SOCKET_URL, {
     transports: ["websocket"],

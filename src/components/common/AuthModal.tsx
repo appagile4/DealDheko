@@ -102,8 +102,9 @@ export const AuthModal: React.FC = () => {
       "882363919027-55u63mhmlrtmd4jtko8icqk91fm01e85.apps.googleusercontent.com",
     scopes: ["profile", "email"],
     redirectUri: Platform.select({
-      ios: "com.googleusercontent.apps.882363919027-cpvtr5pemi2bn67mfb823ipusu60m8q3:/oauthredirect",
-      android: "com.googleusercontent.apps.882363919027-g1cv9i0tks94lq5s5n87bmvsjtuohv4i:/oauthredirect",
+      ios: "com.googleusercontent.apps.882363919027-cpvtr5pemi2bn67mfb823ipusu60m8q3:/oauth2redirect",
+      android:
+        "com.googleusercontent.apps.882363919027-g1cv9i0tks94lq5s5n87bmvsjtuohv4i:/oauth2redirect",
       default: undefined,
     }),
   });
@@ -263,7 +264,11 @@ export const AuthModal: React.FC = () => {
       setEmailCountdown(60);
       setMode("email_otp");
     } catch (err: any) {
-      setLocalError(err.response?.data?.message || err.message || "Failed to send email OTP.");
+      setLocalError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to send email OTP.",
+      );
     } finally {
       setLoading(false);
     }
@@ -319,7 +324,7 @@ export const AuthModal: React.FC = () => {
       });
 
       if (res.data?.success) {
-        Alert.alert("Account Created", "Welcome to DealDheko!");
+        Alert.alert("Account Created", "Welcome to DealDoko!");
         handleClose();
       }
     } catch (err: any) {
@@ -758,7 +763,7 @@ export const AuthModal: React.FC = () => {
                 {/* Terms & Privacy footer */}
                 <View style={styles.footerArea}>
                   <Text style={styles.termsText}>
-                    By continuing, you agree to DealDheko's{" "}
+                    By continuing, you agree to DealDoko's{" "}
                     <Text style={styles.termsLink}>Terms of Use</Text> and{" "}
                     <Text style={styles.termsLink}>Privacy Policy</Text>.
                   </Text>

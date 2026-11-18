@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import storage from "../../services/storage";
 
 interface LocationState {
   selectedCity: string;
@@ -14,7 +14,9 @@ const initialState: LocationState = {
 // Load saved city
 export const loadSavedCity = createAsyncThunk("location/loadSaved", async () => {
   try {
-    const saved = await AsyncStorage.getItem("dealdheko_selected_city");
+    const saved =
+      (await storage.getItem("dealdoko_selected_city")) ||
+      (await storage.getItem("dealdheko_selected_city"));
     return saved || "Kathmandu";
   } catch {
     return "Kathmandu";
@@ -25,7 +27,7 @@ export const loadSavedCity = createAsyncThunk("location/loadSaved", async () => 
 export const setCityAndPersist = createAsyncThunk(
   "location/setCityAndPersist",
   async (city: string) => {
-    await AsyncStorage.setItem("dealdheko_selected_city", city);
+    await storage.setItem("dealdoko_selected_city", city);
     return city;
   }
 );

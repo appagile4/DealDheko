@@ -34,7 +34,9 @@ export default function ListingDetailScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const { currentAd, relatedAds, isLoading } = useAppSelector((state) => state.listings);
+  const { currentAd, relatedAds, isLoading } = useAppSelector(
+    (state) => state.listings,
+  );
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const favouriteIds = useAppSelector((state) => state.favourites.favouriteIds);
 
@@ -69,7 +71,7 @@ export default function ListingDetailScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out this listing on DealDheko: ${currentAd.title} - Rs. ${currentAd.price.toLocaleString("en-IN")}`,
+        message: `Check out this listing on DealDoko: ${currentAd.title} - Rs. ${currentAd.price.toLocaleString("en-IN")}`,
       });
     } catch (err) {}
   };
@@ -79,7 +81,10 @@ export default function ListingDetailScreen() {
     if (phone) {
       Linking.openURL(`tel:${phone}`);
     } else {
-      Alert.alert("Contact Unavailable", "Seller has chosen to communicate via in-app chat.");
+      Alert.alert(
+        "Contact Unavailable",
+        "Seller has chosen to communicate via in-app chat.",
+      );
     }
   };
 
@@ -90,7 +95,10 @@ export default function ListingDetailScreen() {
     }
 
     if (isOwner) {
-      Alert.alert("Your Advertisement", "You cannot start a chat with yourself.");
+      Alert.alert(
+        "Your Advertisement",
+        "You cannot start a chat with yourself.",
+      );
       return;
     }
 
@@ -107,14 +115,21 @@ export default function ListingDetailScreen() {
     } catch (err: any) {
       Alert.alert(
         "Chat Unavailable",
-        err.response?.data?.message || "Could not open chat with the seller."
+        err.response?.data?.message || "Could not open chat with the seller.",
       );
     } finally {
       setStartingChat(false);
     }
   };
 
-  const images = currentAd.images?.length > 0 ? currentAd.images : [{ url: "https://images.unsplash.com/photo-1581291518655-9523c932edcf?auto=format&fit=crop&w=800&q=80" }];
+  const images =
+    currentAd.images?.length > 0
+      ? currentAd.images
+      : [
+          {
+            url: "https://images.unsplash.com/photo-1581291518655-9523c932edcf?auto=format&fit=crop&w=800&q=80",
+          },
+        ];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -126,7 +141,11 @@ export default function ListingDetailScreen() {
 
         <View style={styles.rightBarActions}>
           <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={20} color={THEME.colors.navy} />
+            <Ionicons
+              name="share-social-outline"
+              size={20}
+              color={THEME.colors.navy}
+            />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={handleToggleFav}>
             <Ionicons
@@ -138,7 +157,10 @@ export default function ListingDetailScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Photo Gallery Carousel */}
         <View style={styles.galleryContainer}>
           <ScrollView
@@ -146,7 +168,9 @@ export default function ListingDetailScreen() {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={(e) => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              const idx = Math.round(
+                e.nativeEvent.contentOffset.x / SCREEN_WIDTH,
+              );
               setActiveImageIdx(idx);
             }}
           >
@@ -171,7 +195,9 @@ export default function ListingDetailScreen() {
 
           {/* Condition Tag */}
           <View style={styles.conditionTag}>
-            <Text style={styles.conditionTagText}>{currentAd.condition || "Used"}</Text>
+            <Text style={styles.conditionTagText}>
+              {currentAd.condition || "Used"}
+            </Text>
           </View>
         </View>
 
@@ -184,7 +210,11 @@ export default function ListingDetailScreen() {
 
           <View style={styles.locationDateRow}>
             <View style={styles.locWrap}>
-              <Ionicons name="location" size={14} color={THEME.colors.primary} />
+              <Ionicons
+                name="location"
+                size={14}
+                color={THEME.colors.primary}
+              />
               <Text style={styles.locText}>
                 {currentAd.location?.area ? `${currentAd.location.area}, ` : ""}
                 {currentAd.location?.city || "Nepal"}
@@ -220,9 +250,15 @@ export default function ListingDetailScreen() {
             />
             <View style={styles.sellerTextWrap}>
               <View style={styles.sellerNameRow}>
-                <Text style={styles.sellerName}>{currentAd.seller?.name || "Seller"}</Text>
+                <Text style={styles.sellerName}>
+                  {currentAd.seller?.name || "Seller"}
+                </Text>
                 {currentAd.seller?.isVerified && (
-                  <Ionicons name="checkmark-circle" size={16} color={THEME.colors.primary} />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={16}
+                    color={THEME.colors.primary}
+                  />
                 )}
               </View>
               <Text style={styles.sellerSub}>
@@ -236,7 +272,11 @@ export default function ListingDetailScreen() {
         {relatedAds.length > 0 && (
           <View style={styles.relatedSection}>
             <Text style={styles.sectionHeading}>Similar Advertisements</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.relatedRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.relatedRow}
+            >
               {relatedAds.map((ad) => (
                 <View key={ad._id} style={{ width: 170, marginRight: 12 }}>
                   <ProductCard item={ad} />
@@ -249,7 +289,11 @@ export default function ListingDetailScreen() {
 
       {/* Sticky Bottom Action Bar */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.callButton} onPress={handleCall} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.callButton}
+          onPress={handleCall}
+          activeOpacity={0.8}
+        >
           <Ionicons name="call" size={18} color={THEME.colors.primary} />
           <Text style={styles.callButtonText}>Call</Text>
         </TouchableOpacity>

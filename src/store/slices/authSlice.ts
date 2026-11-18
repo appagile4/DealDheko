@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import storage from "../../services/storage";
 import { authApi } from "../../services/api";
 
 export interface UserProfile {
@@ -39,7 +39,9 @@ export const checkAuthSession = createAsyncThunk(
   "auth/checkSession",
   async (_, { rejectWithValue }) => {
     try {
-      const token = await AsyncStorage.getItem("dealdheko_auth_token");
+      const token =
+        (await storage.getItem("dealdoko_auth_token")) ||
+        (await storage.getItem("dealdheko_auth_token"));
       if (!token) return null;
 
       // Verify token with backend
@@ -49,12 +51,16 @@ export const checkAuthSession = createAsyncThunk(
       }
 
       // If token invalid, remove
-      await AsyncStorage.removeItem("dealdheko_auth_token");
-      await AsyncStorage.removeItem("dealdheko_user");
+      await storage.removeItem("dealdoko_auth_token");
+      await storage.removeItem("dealdheko_auth_token");
+      await storage.removeItem("dealdoko_user");
+      await storage.removeItem("dealdheko_user");
       return null;
     } catch (err: any) {
-      await AsyncStorage.removeItem("dealdheko_auth_token");
-      await AsyncStorage.removeItem("dealdheko_user");
+      await storage.removeItem("dealdoko_auth_token");
+      await storage.removeItem("dealdheko_auth_token");
+      await storage.removeItem("dealdoko_user");
+      await storage.removeItem("dealdheko_user");
       return rejectWithValue(err.response?.data?.message || "Session expired");
     }
   }
@@ -77,8 +83,10 @@ export const loginWithGoogle = createAsyncThunk(
       const res = await authApi.googleAuth(payload);
       const { token, user } = res.data;
       if (token && user) {
-        await AsyncStorage.setItem("dealdheko_auth_token", token);
-        await AsyncStorage.setItem("dealdheko_user", JSON.stringify(user));
+        await storage.setItem("dealdoko_auth_token", token);
+        await storage.setItem("dealdheko_auth_token", token);
+        await storage.setItem("dealdoko_user", JSON.stringify(user));
+        await storage.setItem("dealdheko_user", JSON.stringify(user));
         return { token, user };
       }
       return rejectWithValue("Failed to retrieve user data from Google");
@@ -103,8 +111,10 @@ export const verifyPhoneOtpThunk = createAsyncThunk(
       const res = await authApi.verifyPhoneOtp(phone, otp);
       const { token, user } = res.data;
       if (token && user) {
-        await AsyncStorage.setItem("dealdheko_auth_token", token);
-        await AsyncStorage.setItem("dealdheko_user", JSON.stringify(user));
+        await storage.setItem("dealdoko_auth_token", token);
+        await storage.setItem("dealdheko_auth_token", token);
+        await storage.setItem("dealdoko_user", JSON.stringify(user));
+        await storage.setItem("dealdheko_user", JSON.stringify(user));
         return { token, user };
       }
       return rejectWithValue("Failed to retrieve authentication token");
@@ -133,8 +143,10 @@ export const verifyEmailOtpThunk = createAsyncThunk(
       }
       const { token, user } = res.data;
       if (token && user) {
-        await AsyncStorage.setItem("dealdheko_auth_token", token);
-        await AsyncStorage.setItem("dealdheko_user", JSON.stringify(user));
+        await storage.setItem("dealdoko_auth_token", token);
+        await storage.setItem("dealdheko_auth_token", token);
+        await storage.setItem("dealdoko_user", JSON.stringify(user));
+        await storage.setItem("dealdheko_user", JSON.stringify(user));
         return { token, user, isNewUser: false };
       }
       return rejectWithValue("Verification response incomplete");
@@ -153,8 +165,10 @@ export const verifyEmailOtpThunk = createAsyncThunk(
 
 // Logout
 export const logoutUser = createAsyncThunk("auth/logout", async () => {
-  await AsyncStorage.removeItem("dealdheko_auth_token");
-  await AsyncStorage.removeItem("dealdheko_user");
+  await storage.removeItem("dealdoko_auth_token");
+  await storage.removeItem("dealdheko_auth_token");
+  await storage.removeItem("dealdoko_user");
+  await storage.removeItem("dealdheko_user");
   return null;
 });
 
