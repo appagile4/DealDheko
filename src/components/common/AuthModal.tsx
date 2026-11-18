@@ -393,33 +393,35 @@ export const AuthModal: React.FC = () => {
       animationType="slide"
       onRequestClose={handleClose}
     >
-      <TouchableWithoutFeedback onPress={handleClose}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : undefined}
-              style={styles.sheetContainer}
-            >
-              {/* Drag Handle Indicator */}
-              <View style={styles.handleBar} />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <TouchableWithoutFeedback onPress={handleClose}>
+          <View style={styles.backdrop}>
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <View style={styles.sheetContainer}>
+                {/* Drag Handle Indicator */}
+                <View style={styles.handleBar} />
 
-              {/* Close Button */}
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={handleClose}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                <Ionicons
-                  name="close"
-                  size={24}
-                  color={THEME.colors.textSecondary}
-                />
-              </TouchableOpacity>
+                {/* Close Button */}
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={handleClose}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={THEME.colors.textSecondary}
+                  />
+                </TouchableOpacity>
 
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.sheetContent}
-              >
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.sheetContent}
+                  keyboardShouldPersistTaps="handled"
+                >
                 {/* Brand Logo & Header */}
                 <View style={styles.headerArea}>
                   <Image
@@ -819,15 +821,19 @@ export const AuthModal: React.FC = () => {
                   </Text>
                 </View>
               </ScrollView>
-            </KeyboardAvoidingView>
+            </View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
-    </Modal>
+    </KeyboardAvoidingView>
+  </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: THEME.colors.backdrop,
