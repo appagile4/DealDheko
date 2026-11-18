@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Mail, Phone } from "lucide-react";
+import { Mail, Phone, AlertCircle } from "lucide-react";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 
 interface AuthMethodSelectorProps {
@@ -10,6 +10,7 @@ interface AuthMethodSelectorProps {
   onSelectPhone: () => void;
   onGoogleSuccess: () => void;
   onGoogleError: (err: string) => void;
+  errorMessage?: string | null;
 }
 
 export const AuthMethodSelector: React.FC<AuthMethodSelectorProps> = ({
@@ -17,6 +18,7 @@ export const AuthMethodSelector: React.FC<AuthMethodSelectorProps> = ({
   onSelectPhone,
   onGoogleSuccess,
   onGoogleError,
+  errorMessage,
 }) => {
   return (
     <div className="flex flex-col text-slate-800">
@@ -35,6 +37,14 @@ export const AuthMethodSelector: React.FC<AuthMethodSelectorProps> = ({
           Choose how you want to continue.
         </p>
       </div>
+
+      {/* Error alert banner */}
+      {errorMessage && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 animate-fadeIn">
+          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
       {/* Auth Actions */}
       <div className="space-y-3">

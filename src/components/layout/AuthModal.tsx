@@ -87,6 +87,7 @@ export function AuthModal() {
           onSelectPhone={() => setView("phone-input")}
           onGoogleSuccess={handleAuthSuccess}
           onGoogleError={(err) => setGoogleError(err)}
+          errorMessage={googleError}
         />
       )}
 

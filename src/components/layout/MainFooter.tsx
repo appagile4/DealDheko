@@ -238,6 +238,7 @@ export function MainFooter() {
                 { name: "Help Center & FAQ", href: "/help" },
                 { name: "Terms of Use", href: "/terms" },
                 { name: "Privacy Policy", href: "/privacy" },
+                { name: "Delete Account", href: "/delete-account" },
               ].map((item) => (
                 <li key={item.name}>
                   <Link

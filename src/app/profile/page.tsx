@@ -478,6 +478,31 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Account Settings & Danger Zone */}
+      <div className="pt-6 border-t border-slate-200">
+        <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-slate-600" />
+              Account &amp; Data Management
+            </h4>
+            <p className="text-xs text-slate-500 max-w-lg leading-relaxed">
+              Permanently delete your DealDoko account, advertisements, chat conversations, and personal data. This action is irreversible and requires email OTP verification.
+            </p>
+          </div>
+          <Link href="/delete-account" className="shrink-0 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5 text-rose-600" />}
+              className="w-full sm:w-auto border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 font-bold"
+            >
+              Delete Account
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       {/* Edit / Resubmit Modal */}
       {editingAd && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
