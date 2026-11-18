@@ -1,19 +1,19 @@
-import React, { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
 import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
+import { AuthModal } from "../components/common/AuthModal";
+import { LocationModal } from "../components/common/LocationModal";
+import { THEME } from "../constants/theme";
+import { disconnectSocket, initSocket } from "../services/socket";
 import { store } from "../store";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { checkAuthSession } from "../store/slices/authSlice";
 import { loadFavourites } from "../store/slices/favouritesSlice";
 import { loadSavedCity } from "../store/slices/locationSlice";
-import { initSocket, disconnectSocket } from "../services/socket";
-import { AuthModal } from "../components/common/AuthModal";
-import { LocationModal } from "../components/common/LocationModal";
-import { THEME } from "../constants/theme";
 
 function AppContent() {
   const dispatch = useAppDispatch();
@@ -48,7 +48,14 @@ function AppContent() {
           animation: "slide_from_right",
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="index"
+          options={{ headerShown: false, animation: "fade" }}
+        />
+        <Stack.Screen
+          name="(tabs)"
+          options={{ headerShown: false, animation: "fade" }}
+        />
         <Stack.Screen name="listing/[slug]" options={{ headerShown: false }} />
         <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="search" options={{ headerShown: false }} />
