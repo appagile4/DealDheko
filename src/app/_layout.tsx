@@ -10,6 +10,7 @@ import {
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
+import * as WebBrowser from "expo-web-browser";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import { store } from "../store";
@@ -24,6 +25,9 @@ import { THEME } from "../constants/theme";
 
 // Keep the native splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Global interception of OAuth callback sessions
+WebBrowser.maybeCompleteAuthSession();
 
 function AppContent() {
   const dispatch = useAppDispatch();
@@ -90,6 +94,20 @@ function AppContent() {
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen name="safety-tips" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="oauth2redirect"
+          options={{
+            headerShown: false,
+            animation: "fade",
+          }}
+        />
+        <Stack.Screen
+          name="oauthredirect"
+          options={{
+            headerShown: false,
+            animation: "fade",
+          }}
+        />
       </Stack>
 
       {/* Global Modals accessible anywhere */}
