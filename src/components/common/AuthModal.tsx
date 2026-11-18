@@ -251,8 +251,16 @@ export const AuthModal: React.FC = () => {
   };
 
   // ==========================================
-  // PHONE FLOW (Passwordless)
+  // PHONE FLOW (Passwordless) - Temporarily disabled (Coming Soon)
   // ==========================================
+  const handlePhoneLoginPress = () => {
+    Alert.alert(
+      "Coming Soon",
+      "Phone number login is coming soon. Please continue with Google or Email for now."
+    );
+  };
+
+  /*
   const handleSendPhoneOtp = async () => {
     const cleanPhone = phoneNumber.replace(/[\s-]/g, "");
     if (!cleanPhone || cleanPhone.length < 10) {
@@ -296,6 +304,7 @@ export const AuthModal: React.FC = () => {
       setLoading(false);
     }
   };
+  */
 
   // ==========================================
   // EMAIL FLOW
@@ -500,7 +509,7 @@ export const AuthModal: React.FC = () => {
                     {/* Phone Button */}
                     <TouchableOpacity
                       style={styles.phoneButton}
-                      onPress={() => setMode("phone")}
+                      onPress={handlePhoneLoginPress}
                     >
                       <Ionicons name="call-outline" size={20} color="#000000" />
                       <Text style={styles.phoneButtonText}>
@@ -511,8 +520,9 @@ export const AuthModal: React.FC = () => {
                 )}
 
                 {/* ========================================================= */}
-                {/* PHONE STEP 1: Enter Phone */}
+                {/* PHONE STEP 1 & 2: Temporarily disabled (Coming Soon)     */}
                 {/* ========================================================= */}
+                {/*
                 {mode === "phone" && (
                   <View style={styles.formContainer}>
                     <Text style={styles.inputLabel}>Mobile Phone Number</Text>
@@ -558,9 +568,6 @@ export const AuthModal: React.FC = () => {
                   </View>
                 )}
 
-                {/* ========================================================= */}
-                {/* PHONE STEP 2: Verify Phone OTP */}
-                {/* ========================================================= */}
                 {mode === "phone_otp" && (
                   <View style={styles.formContainer}>
                     <Text style={styles.inputLabel}>
@@ -622,6 +629,7 @@ export const AuthModal: React.FC = () => {
                     </TouchableOpacity>
                   </View>
                 )}
+                */}
 
                 {/* ========================================================= */}
                 {/* EMAIL STEP 1: Enter Email */}
