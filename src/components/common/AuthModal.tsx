@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { THEME } from "../../constants/theme";
 import { authApi } from "../../services/api";
+import googleAuthService from "../../services/googleAuth";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   clearAuthError,
@@ -102,17 +103,15 @@ export const AuthModal: React.FC = () => {
       "882363919027-55u63mhmlrtmd4jtko8icqk91fm01e85.apps.googleusercontent.com",
     scopes: ["profile", "email"],
     redirectUri: Platform.select({
-      ios: "com.googleusercontent.apps.882363919027-cpvtr5pemi2bn67mfb823ipusu60m8q3:/oauth2redirect",
+      ios: "com.googleusercontent.apps.882363919027-cpvtr5pemi2bn67mfb823ipusu60m8q3:/oauthredirect",
       android:
         "com.googleusercontent.apps.882363919027-g1cv9i0tks94lq5s5n87bmvsjtuohv4i:/oauth2redirect",
       default: undefined,
     }),
   });
 
-  const isAuthenticatingRef = React.useRef(false);
-
   useEffect(() => {
-    if (response?.type === "success" && !isAuthenticatingRef.current) {
+    if (response?.type === "success") {
       handleGoogleAuthSuccess(response);
     } else if (response?.type === "error") {
       setLocalError(
@@ -123,8 +122,6 @@ export const AuthModal: React.FC = () => {
   }, [response]);
 
   const handleGoogleAuthSuccess = async (authResponse: any) => {
-    if (isAuthenticatingRef.current) return;
-    isAuthenticatingRef.current = true;
     setLoading(true);
     setLocalError(null);
     try {
@@ -178,28 +175,79 @@ export const AuthModal: React.FC = () => {
       setLocalError(err || "Google sign-in could not be completed.");
     } finally {
       setLoading(false);
-      isAuthenticatingRef.current = false;
     }
   };
 
-  // Trigger Google OAuth Flow
+  // Initialize native Google Sign-In SDK
+  useEffect(() => {
+    googleAuthService.init();
+  }, []);
+
+  // Trigger Google OAuth Flow (Native SDK with browser fallback)
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setLocalError(null);
-    try {
-      const res = await promptAsync();
-      if (res.type === "success") {
-        await handleGoogleAuthSuccess(res);
-      } else if (res.type === "error") {
-        setLoading(false);
-        setLocalError(res.error?.message || "Failed to launch Google Sign-In.");
-      } else {
+
+    // 1. Prefer native Google Sign-In SDK if available in the current build (like Kalki_Sena_Drive)
+    if (googleAuthService.isAvailable()) {
+      try {
+        const result = await googleAuthService.signIn();
+        if (result.cancelled) {
+          setLoading(false);
+          return;
+        }
+
+        if (!result.success || !result.idToken) {
+          setLocalError(result.error || "Google Sign-In failed.");
+          setLoading(false);
+          return;
+        }
+
+        await dispatch(
+          loginWithGoogle({
+            idToken: result.idToken,
+            credential: result.idToken,
+            accessToken: result.accessToken,
+            userInfo: result.userInfo,
+          }),
+        ).unwrap();
+
+        handleClose();
+      } catch (err: any) {
+        setLocalError(err || "Google authentication failed.");
+      } finally {
         setLoading(false);
       }
-    } catch (err: any) {
-      setLoading(false);
-      setLocalError(err.message || "Failed to launch Google Sign-In.");
+      return;
     }
+
+    // 2. Web fallback (when running on Web)
+    if (Platform.OS === "web") {
+      try {
+        if (!request) {
+          const res = await promptAsync();
+          if (res.type !== "success") {
+            setLoading(false);
+          }
+          return;
+        }
+        const res = await promptAsync();
+        if (res.type !== "success") {
+          setLoading(false);
+        }
+      } catch (err: any) {
+        setLoading(false);
+        setLocalError(err.message || "Failed to launch Google Sign-In.");
+      }
+      return;
+    }
+
+    // 3. Mobile in Expo Go: Prompt developer/user that a development build is required (matching Kalki_Sena_Drive)
+    setLoading(false);
+    Alert.alert(
+      "Development Build Required",
+      "Google Sign-In uses native Google Play Services / iOS frameworks and requires a development build (npx expo run:ios or EAS build). It is not available in the standard Expo Go app.\n\nYou can continue testing using Email OTP or Phone OTP in Expo Go."
+    );
   };
 
   // ==========================================
