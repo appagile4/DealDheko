@@ -97,6 +97,7 @@ export function AuthModal() {
             setTargetEmail(email);
             setView("email-otp");
           }}
+          onSuccess={handleAuthSuccess}
         />
       )}
 
