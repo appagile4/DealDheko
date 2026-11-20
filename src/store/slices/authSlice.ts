@@ -225,6 +225,33 @@ export const setEmailPasswordThunk = createAsyncThunk(
   }
 );
 
+// Account & Data Deletion
+export const deleteAccountThunk = createAsyncThunk(
+  "auth/deleteAccount",
+  async (
+    payload: {
+      email: string;
+      otp: string;
+      reason?: string;
+      reasonDetails?: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      await authApi.confirmDeleteAccount(payload);
+      await storage.removeItem("dealdoko_auth_token");
+      await storage.removeItem("dealdheko_auth_token");
+      await storage.removeItem("dealdoko_user");
+      await storage.removeItem("dealdheko_user");
+      return null;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || err.message || "Failed to delete account"
+      );
+    }
+  }
+);
+
 // Logout
 export const logoutUser = createAsyncThunk("auth/logout", async () => {
   await storage.removeItem("dealdoko_auth_token");
@@ -364,6 +391,22 @@ const authSlice = createSlice({
       state.authModalVisible = false;
     });
     builder.addCase(setEmailPasswordThunk.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Delete Account
+    builder.addCase(deleteAccountThunk.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(deleteAccountThunk.fulfilled, (state) => {
+      state.isLoading = false;
+      state.token = null;
+      state.user = null;
+      state.isAuthenticated = false;
+    });
+    builder.addCase(deleteAccountThunk.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
     });

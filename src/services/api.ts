@@ -99,6 +99,16 @@ export const authApi = {
     apiClient.post("/auth/avatar", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+
+  // Account & Data Deletion
+  requestDeleteAccountOtp: (email: string) =>
+    apiClient.post("/auth/delete-account/send-otp", { email }),
+  confirmDeleteAccount: (data: {
+    email: string;
+    otp: string;
+    reason?: string;
+    reasonDetails?: string;
+  }) => apiClient.post("/auth/delete-account/confirm", data),
 };
 
 export const listingsApi = {

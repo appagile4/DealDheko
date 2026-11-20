@@ -219,6 +219,16 @@ export default function EditProfileScreen() {
             <Text style={styles.saveActionText}>Save Changes</Text>
           )}
         </TouchableOpacity>
+
+        {/* Delete Account Action */}
+        <TouchableOpacity
+          style={styles.deleteAccountBtn}
+          onPress={() => router.push("/delete-account" as any)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="trash-outline" size={16} color={THEME.colors.danger} />
+          <Text style={styles.deleteAccountBtnText}>Delete Account</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -358,6 +368,23 @@ const styles = StyleSheet.create({
   saveActionText: {
     color: "#FFFFFF",
     fontSize: THEME.typography.sizes.base,
+    fontWeight: "700",
+  },
+  deleteAccountBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    marginTop: 14,
+    gap: 8,
+    borderRadius: THEME.radii.md,
+    borderWidth: 1,
+    borderColor: THEME.colors.danger,
+    backgroundColor: THEME.colors.dangerLight,
+  },
+  deleteAccountBtnText: {
+    color: THEME.colors.danger,
+    fontSize: 14,
     fontWeight: "700",
   },
 });
