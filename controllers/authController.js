@@ -473,7 +473,7 @@ export const setEmailPassword = async (req, res) => {
       name: name?.trim() || cleanEmail.split("@")[0],
       email: cleanEmail,
       password,
-      phone: phone?.trim() || "+977 98412 34567",
+      ...(phone?.trim() ? { phone: phone.trim() } : {}),
       city: city || "Kathmandu",
       isVerified: true,
       authProvider: "email_otp",
@@ -725,7 +725,11 @@ export const signup = async (req, res) => {
     if (existingUser && !existingUser.isVerified) {
       existingUser.name = name;
       existingUser.password = password;
-      if (phone) existingUser.phone = phone;
+      if (phone?.trim()) {
+        existingUser.phone = phone.trim();
+      } else {
+        existingUser.phone = undefined;
+      }
       if (city) existingUser.city = city;
       await existingUser.save();
     } else {
@@ -733,7 +737,7 @@ export const signup = async (req, res) => {
         name,
         email: cleanEmail,
         password,
-        phone: phone || "+977 98412 34567",
+        ...(phone?.trim() ? { phone: phone.trim() } : {}),
         city: city || "Kathmandu",
         isVerified: false,
         authProvider: "local",
@@ -1040,7 +1044,24 @@ export const updateProfile = async (req, res) => {
 
     if (name) user.name = name.trim();
     if (about !== undefined) user.about = about.trim();
-    if (phone) user.phone = phone.trim();
+    if (phone !== undefined) {
+      const cleanPhone = phone ? phone.trim() : "";
+      if (cleanPhone) {
+        const existingPhoneUser = await User.findOne({
+          phone: cleanPhone,
+          _id: { $ne: user._id },
+        });
+        if (existingPhoneUser) {
+          return res.status(400).json({
+            success: false,
+            message: "This phone number is already registered to another account.",
+          });
+        }
+        user.phone = cleanPhone;
+      } else {
+        user.phone = undefined;
+      }
+    }
     if (city) user.city = city.trim();
     if (avatar) user.avatar = avatar;
     if (isGoogleLinked !== undefined) user.isGoogleLinked = isGoogleLinked;

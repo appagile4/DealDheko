@@ -91,6 +91,17 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Ensure empty strings or nulls are unset so sparse unique indexes (phone, email) never collide
+userSchema.pre("validate", function (next) {
+  if (this.phone === "" || this.phone === null) {
+    this.phone = undefined;
+  }
+  if (this.email === "" || this.email === null) {
+    this.email = undefined;
+  }
+  next();
+});
+
 // Hash password before saving
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password") || !this.password) {
