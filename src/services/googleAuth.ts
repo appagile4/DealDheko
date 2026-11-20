@@ -204,11 +204,16 @@ export const googleAuthService = {
         error.code === "10" ||
         error.message?.includes("DEVELOPER_ERROR")
       ) {
+        console.error(
+          "[GoogleAuth] DEVELOPER_ERROR (code 10). Registered EAS SHA-1 needed: 14:40:5B:5F:D5:9C:B5:8B:7E:D8:5D:A5:44:98:D8:F6:F8:7C:64:E1 for package com.agileinvent.dealdheko"
+        );
         return {
           success: false,
           error:
             "DEVELOPER_ERROR (code 10):\n" +
-            "Ensure the SHA-1 fingerprint for your build is registered in Google Cloud Console under the Android client for package com.agileinvent.dealdheko.",
+            "Register this build's SHA-1 fingerprint in Google Cloud Console (under package com.agileinvent.dealdheko):\n" +
+            "SHA-1: 14:40:5B:5F:D5:9C:B5:8B:7E:D8:5D:A5:44:98:D8:F6:F8:7C:64:E1\n\n" +
+            "(If installed via Google Play Store track, also register the Play App Signing SHA-1 from Play Console > App Integrity).",
         };
       }
 
