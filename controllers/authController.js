@@ -21,7 +21,7 @@ const generateToken = (userId) => {
 };
 
 // Set JWT Cookie & JSON Response
-const sendTokenResponse = (user, statusCode, res, message = "Success") => {
+const sendTokenResponse = (user, statusCode, res, message = "Success", extraData = {}) => {
   const token = generateToken(user._id);
 
   const cookieOptions = {
@@ -39,6 +39,8 @@ const sendTokenResponse = (user, statusCode, res, message = "Success") => {
     message,
     token,
     user: userObj,
+    isNewUser: false,
+    ...extraData,
   });
 };
 
