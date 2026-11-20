@@ -163,20 +163,12 @@ export const verifyEmailOtpThunk = createAsyncThunk(
   }
 );
 
-// Unified Authentication: Set Email Password (New User)
-export const setEmailPasswordThunk = createAsyncThunk(
-  "auth/setEmailPassword",
-  async (
-    payload: {
-      registrationToken: string;
-      email: string;
-      password: string;
-      name?: string;
-    },
-    { rejectWithValue }
-  ) => {
+// Unified Authentication: Login with Email & Password
+export const loginWithEmail = createAsyncThunk(
+  "auth/loginWithEmail",
+  async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const res = await authApi.setEmailPassword(payload);
+      const res = await authApi.login(email, password);
       const { token, user } = res.data;
       if (token && user) {
         await storage.setItem("dealdoko_auth_token", token);
@@ -185,13 +177,49 @@ export const setEmailPasswordThunk = createAsyncThunk(
         await storage.setItem("dealdheko_user", JSON.stringify(user));
         return { token, user };
       }
-      return rejectWithValue("Failed to complete account registration");
+      return rejectWithValue("Invalid response from server");
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.message ||
         err.response?.data?.error ||
         err.message ||
-        "Failed to set password and complete registration"
+        "Invalid email or password"
+      );
+    }
+  }
+);
+
+// Unified Authentication: Set Password for New Email User
+export const setEmailPasswordThunk = createAsyncThunk(
+  "auth/setEmailPassword",
+  async (
+    data: {
+      registrationToken: string;
+      email: string;
+      password: string;
+      name?: string;
+      phone?: string;
+      city?: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await authApi.setEmailPassword(data);
+      const { token, user } = res.data;
+      if (token && user) {
+        await storage.setItem("dealdoko_auth_token", token);
+        await storage.setItem("dealdheko_auth_token", token);
+        await storage.setItem("dealdoko_user", JSON.stringify(user));
+        await storage.setItem("dealdheko_user", JSON.stringify(user));
+        return { token, user };
+      }
+      return rejectWithValue("Failed to complete registration");
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to set password"
       );
     }
   }
@@ -306,7 +334,24 @@ const authSlice = createSlice({
       state.error = action.payload as string;
     });
 
-    // Set Email Password (New User Completion)
+    // Login with Email & Password
+    builder.addCase(loginWithEmail.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(loginWithEmail.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.token = action.payload.token;
+      state.user = action.payload.user;
+      state.isAuthenticated = true;
+      state.authModalVisible = false;
+    });
+    builder.addCase(loginWithEmail.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Set Email Password (New User)
     builder.addCase(setEmailPasswordThunk.pending, (state) => {
       state.isLoading = true;
       state.error = null;

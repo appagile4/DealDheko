@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,7 +19,6 @@ import {
   View,
 } from "react-native";
 import { THEME } from "../../constants/theme";
-import { useRouter } from "expo-router";
 import { authApi } from "../../services/api";
 import googleAuthService from "../../services/googleAuth";
 import { LegalModal, LegalModalType } from "./LegalModal";
@@ -26,10 +26,11 @@ import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   clearAuthError,
   loginWithGoogle,
+  loginWithEmail,
   setAuthModalVisible,
   verifyEmailOtpThunk,
-  verifyPhoneOtpThunk,
   setEmailPasswordThunk,
+  verifyPhoneOtpThunk,
 } from "../../store/slices/authSlice";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -43,8 +44,8 @@ type AuthMode =
   | "set_password";
 
 export const AuthModal: React.FC = () => {
-  const dispatch = useAppDispatch();
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const visible = useAppSelector((state) => state.auth.authModalVisible);
   const authError = useAppSelector((state) => state.auth.error);
 
@@ -62,7 +63,9 @@ export const AuthModal: React.FC = () => {
   const [phoneCountdown, setPhoneCountdown] = useState(0);
 
   // Email flow
+  const [emailMode, setEmailMode] = useState<"otp" | "password">("otp");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [emailOtp, setEmailOtp] = useState("");
   const [emailCountdown, setEmailCountdown] = useState(0);
   const [registrationToken, setRegistrationToken] = useState("");
@@ -74,8 +77,14 @@ export const AuthModal: React.FC = () => {
   useEffect(() => {
     if (visible) {
       setMode("initial");
+      setEmailMode("otp");
       setLocalError(null);
       setLoading(false);
+      setPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setFullName("");
+      setEmailOtp("");
       dispatch(clearAuthError());
     }
   }, [visible]);
@@ -179,7 +188,6 @@ export const AuthModal: React.FC = () => {
       ).unwrap();
 
       handleClose();
-      router.replace("/(tabs)/account" as any);
     } catch (err: any) {
       setLocalError(err || "Google sign-in could not be completed.");
     } finally {
@@ -222,7 +230,6 @@ export const AuthModal: React.FC = () => {
         ).unwrap();
 
         handleClose();
-        router.replace("/(tabs)/account" as any);
       } catch (err: any) {
         setLocalError(err || "Google authentication failed.");
       } finally {
@@ -360,11 +367,11 @@ export const AuthModal: React.FC = () => {
       ).unwrap();
 
       if (res?.isNewUser && res?.registrationToken) {
-        // New user: Transition to Set Password screen
+        // New user -> ask to set password
         setRegistrationToken(res.registrationToken);
         setMode("set_password");
       } else {
-        // Existing user: Authenticated directly -> Close modal and route to Dashboard
+        // Existing user -> verified & logged in! Route directly to dashboard/account!
         handleClose();
         router.replace("/(tabs)/account" as any);
       }
@@ -394,14 +401,47 @@ export const AuthModal: React.FC = () => {
           email: email.trim().toLowerCase(),
           password: newPassword,
           name: fullName.trim() || undefined,
-        })
+        }),
       ).unwrap();
 
-      // Successfully registered & authenticated -> Close modal and route to Dashboard
+      // Successfully registered & authenticated -> route to dashboard/account!
       handleClose();
       router.replace("/(tabs)/account" as any);
     } catch (err: any) {
-      setLocalError(err || "Failed to create password.");
+      setLocalError(
+        err || "Failed to create password.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailPasswordLogin = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setLocalError("Please enter a valid email address.");
+      return;
+    }
+    if (!password) {
+      setLocalError("Please enter your account password.");
+      return;
+    }
+
+    setLoading(true);
+    setLocalError(null);
+    try {
+      await dispatch(
+        loginWithEmail({
+          email: cleanEmail,
+          password,
+        }),
+      ).unwrap();
+
+      // Successfully logged in -> route to dashboard/account!
+      handleClose();
+      router.replace("/(tabs)/account" as any);
+    } catch (err: any) {
+      setLocalError(err || "Invalid email or password.");
     } finally {
       setLoading(false);
     }
@@ -424,6 +464,28 @@ export const AuthModal: React.FC = () => {
               <View style={styles.sheetContainer}>
                 {/* Drag Handle Indicator */}
                 <View style={styles.handleBar} />
+
+                {/* Back Button (when in sub-flow) */}
+                {mode !== "initial" && (
+                  <TouchableOpacity
+                    style={styles.backButtonTop}
+                    onPress={() => {
+                      if (mode === "email_otp" || mode === "set_password") {
+                        setMode("email");
+                      } else {
+                        setMode("initial");
+                      }
+                      setLocalError(null);
+                    }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <Ionicons
+                      name="arrow-back"
+                      size={22}
+                      color={THEME.colors.text}
+                    />
+                  </TouchableOpacity>
+                )}
 
                 {/* Close Button */}
                 <TouchableOpacity
@@ -450,16 +512,17 @@ export const AuthModal: React.FC = () => {
                     style={styles.logoImage}
                     resizeMode="contain"
                   />
-                  <Text style={styles.titleText}>
-                    {mode === "set_password" ? "Set Your Password" : "Welcome Back"}
-                  </Text>
+                  <Text style={styles.titleText}>Welcome Back</Text>
                   <Text style={styles.subtitleText}>
                     {mode === "initial" && "Choose how you want to continue"}
                     {mode === "phone" &&
                       "Enter your phone number to receive an OTP"}
                     {mode === "phone_otp" &&
                       `Enter 6-digit code sent to ${phoneNumber}`}
-                    {mode === "email" && "Enter your email to receive an OTP"}
+                    {mode === "email" &&
+                      (emailMode === "otp"
+                        ? "Verify with a 6-digit code. Existing users log in; new users set password."
+                        : "Enter your registered email and password to log in.")}
                     {mode === "email_otp" &&
                       `Enter 6-digit code sent to ${email}`}
                     {mode === "set_password" &&
@@ -646,10 +709,65 @@ export const AuthModal: React.FC = () => {
                 */}
 
                 {/* ========================================================= */}
-                {/* EMAIL STEP 1: Enter Email */}
+                {/* EMAIL STEP 1: Enter Email (OTP vs Password Switcher)     */}
                 {/* ========================================================= */}
                 {mode === "email" && (
                   <View style={styles.formContainer}>
+                    {/* Tab Selector: Email OTP vs Password Login */}
+                    <View style={styles.tabContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.tabButton,
+                          emailMode === "otp" && styles.tabButtonActive,
+                        ]}
+                        onPress={() => {
+                          setEmailMode("otp");
+                          setLocalError(null);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name="keypad-outline"
+                          size={16}
+                          color={emailMode === "otp" ? THEME.colors.primary : THEME.colors.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.tabButtonText,
+                            emailMode === "otp" && styles.tabButtonTextActive,
+                          ]}
+                        >
+                          Email OTP
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.tabButton,
+                          emailMode === "password" && styles.tabButtonActive,
+                        ]}
+                        onPress={() => {
+                          setEmailMode("password");
+                          setLocalError(null);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name="lock-closed-outline"
+                          size={16}
+                          color={emailMode === "password" ? THEME.colors.primary : THEME.colors.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.tabButtonText,
+                            emailMode === "password" && styles.tabButtonTextActive,
+                          ]}
+                        >
+                          Password Login
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
                     <Text style={styles.inputLabel}>Email Address</Text>
                     <View style={styles.inputWrapper}>
                       <Ionicons
@@ -669,16 +787,39 @@ export const AuthModal: React.FC = () => {
                       />
                     </View>
 
+                    {emailMode === "password" && (
+                      <>
+                        <Text style={[styles.inputLabel, { marginTop: 10 }]}>
+                          Password
+                        </Text>
+                        <View style={styles.inputWrapper}>
+                          <Ionicons
+                            name="lock-closed-outline"
+                            size={20}
+                            color={THEME.colors.textMuted}
+                          />
+                          <TextInput
+                            style={styles.textInput}
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            placeholder="Enter your account password"
+                            placeholderTextColor={THEME.colors.textMuted}
+                          />
+                        </View>
+                      </>
+                    )}
+
                     <TouchableOpacity
                       style={styles.primaryActionButton}
-                      onPress={handleSendEmailOtp}
+                      onPress={emailMode === "password" ? handleEmailPasswordLogin : handleSendEmailOtp}
                       disabled={loading}
                     >
                       {loading ? (
                         <ActivityIndicator color="#FFFFFF" />
                       ) : (
                         <Text style={styles.primaryActionText}>
-                          Send Verification Code
+                          {emailMode === "password" ? "Log In" : "Send Verification Code"}
                         </Text>
                       )}
                     </TouchableOpacity>
@@ -915,6 +1056,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  backButtonTop: {
+    position: "absolute",
+    top: 16,
+    left: 18,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: THEME.colors.borderLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   sheetContent: {
     paddingHorizontal: 24,
     paddingTop: 12,
@@ -1027,6 +1180,34 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     gap: 8,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: THEME.colors.borderLight,
+    padding: 4,
+    borderRadius: THEME.radii.md,
+    marginBottom: 10,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: THEME.radii.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  tabButtonActive: {
+    backgroundColor: "#FFFFFF",
+    ...THEME.shadows.sm,
+  },
+  tabButtonText: {
+    fontSize: THEME.typography.sizes.sm,
+    fontWeight: "600",
+    color: THEME.colors.textSecondary,
+  },
+  tabButtonTextActive: {
+    color: THEME.colors.primary,
   },
   inputLabel: {
     fontSize: THEME.typography.sizes.sm,
