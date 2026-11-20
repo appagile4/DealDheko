@@ -229,6 +229,17 @@ export default function EditProfilePage() {
               View profile
             </Button>
           </Link>
+
+          {/* Delete Account Sidebar Link */}
+          <Link href="/delete-account" className="block mt-3">
+            <button
+              type="button"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-rose-200 bg-rose-50/70 hover:bg-rose-100/80 text-rose-600 font-bold text-xs transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span>Delete Account</span>
+            </button>
+          </Link>
         </aside>
 
         {/* Right Main Form Card */}
@@ -409,6 +420,31 @@ export default function EditProfilePage() {
                   >
                     {isGoogleLinked ? "Unlink" : "Link Google"}
                   </button>
+                </div>
+              </div>
+
+              {/* Section 4: Danger Zone / Delete Account */}
+              <div className="px-6 sm:px-8 py-6 border-t border-slate-200 bg-rose-50/40">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-rose-700 flex items-center gap-1.5">
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      Delete DealDoko Account
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-md leading-relaxed">
+                      Permanently delete your DealDoko account, active advertisements, messages, and personal information. This action is irreversible.
+                    </p>
+                  </div>
+
+                  <Link href="/delete-account" className="w-full sm:w-auto shrink-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full sm:w-auto border-rose-300 text-rose-600 hover:bg-rose-50 hover:border-rose-400 font-bold px-5 py-2 text-xs rounded-lg transition-colors cursor-pointer"
+                    >
+                      Delete Account
+                    </Button>
+                  </Link>
                 </div>
               </div>
 
