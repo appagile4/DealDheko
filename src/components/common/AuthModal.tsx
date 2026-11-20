@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import { THEME } from "../../constants/theme";
+import { useRouter } from "expo-router";
 import { authApi } from "../../services/api";
 import googleAuthService from "../../services/googleAuth";
 import { LegalModal, LegalModalType } from "./LegalModal";
@@ -28,6 +29,7 @@ import {
   setAuthModalVisible,
   verifyEmailOtpThunk,
   verifyPhoneOtpThunk,
+  setEmailPasswordThunk,
 } from "../../store/slices/authSlice";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -42,6 +44,7 @@ type AuthMode =
 
 export const AuthModal: React.FC = () => {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const visible = useAppSelector((state) => state.auth.authModalVisible);
   const authError = useAppSelector((state) => state.auth.error);
 
@@ -176,6 +179,7 @@ export const AuthModal: React.FC = () => {
       ).unwrap();
 
       handleClose();
+      router.replace("/(tabs)/account" as any);
     } catch (err: any) {
       setLocalError(err || "Google sign-in could not be completed.");
     } finally {
@@ -218,6 +222,7 @@ export const AuthModal: React.FC = () => {
         ).unwrap();
 
         handleClose();
+        router.replace("/(tabs)/account" as any);
       } catch (err: any) {
         setLocalError(err || "Google authentication failed.");
       } finally {
@@ -355,10 +360,13 @@ export const AuthModal: React.FC = () => {
       ).unwrap();
 
       if (res?.isNewUser && res?.registrationToken) {
+        // New user: Transition to Set Password screen
         setRegistrationToken(res.registrationToken);
         setMode("set_password");
       } else {
+        // Existing user: Authenticated directly -> Close modal and route to Dashboard
         handleClose();
+        router.replace("/(tabs)/account" as any);
       }
     } catch (err: any) {
       setLocalError(err || "Invalid email verification code.");
@@ -380,21 +388,20 @@ export const AuthModal: React.FC = () => {
     setLoading(true);
     setLocalError(null);
     try {
-      const res = await authApi.setEmailPassword({
-        registrationToken,
-        email: email.trim().toLowerCase(),
-        password: newPassword,
-        name: fullName.trim() || undefined,
-      });
+      await dispatch(
+        setEmailPasswordThunk({
+          registrationToken,
+          email: email.trim().toLowerCase(),
+          password: newPassword,
+          name: fullName.trim() || undefined,
+        })
+      ).unwrap();
 
-      if (res.data?.success) {
-        Alert.alert("Account Created", "Welcome to DealDoko!");
-        handleClose();
-      }
+      // Successfully registered & authenticated -> Close modal and route to Dashboard
+      handleClose();
+      router.replace("/(tabs)/account" as any);
     } catch (err: any) {
-      setLocalError(
-        err.response?.data?.message || "Failed to create password.",
-      );
+      setLocalError(err || "Failed to create password.");
     } finally {
       setLoading(false);
     }
@@ -443,7 +450,9 @@ export const AuthModal: React.FC = () => {
                     style={styles.logoImage}
                     resizeMode="contain"
                   />
-                  <Text style={styles.titleText}>Welcome Back</Text>
+                  <Text style={styles.titleText}>
+                    {mode === "set_password" ? "Set Your Password" : "Welcome Back"}
+                  </Text>
                   <Text style={styles.subtitleText}>
                     {mode === "initial" && "Choose how you want to continue"}
                     {mode === "phone" &&

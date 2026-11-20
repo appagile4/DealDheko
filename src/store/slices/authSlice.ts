@@ -163,6 +163,40 @@ export const verifyEmailOtpThunk = createAsyncThunk(
   }
 );
 
+// Unified Authentication: Set Email Password (New User)
+export const setEmailPasswordThunk = createAsyncThunk(
+  "auth/setEmailPassword",
+  async (
+    payload: {
+      registrationToken: string;
+      email: string;
+      password: string;
+      name?: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await authApi.setEmailPassword(payload);
+      const { token, user } = res.data;
+      if (token && user) {
+        await storage.setItem("dealdoko_auth_token", token);
+        await storage.setItem("dealdheko_auth_token", token);
+        await storage.setItem("dealdoko_user", JSON.stringify(user));
+        await storage.setItem("dealdheko_user", JSON.stringify(user));
+        return { token, user };
+      }
+      return rejectWithValue("Failed to complete account registration");
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to set password and complete registration"
+      );
+    }
+  }
+);
+
 // Logout
 export const logoutUser = createAsyncThunk("auth/logout", async () => {
   await storage.removeItem("dealdoko_auth_token");
@@ -268,6 +302,23 @@ const authSlice = createSlice({
       }
     });
     builder.addCase(verifyEmailOtpThunk.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Set Email Password (New User Completion)
+    builder.addCase(setEmailPasswordThunk.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(setEmailPasswordThunk.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.token = action.payload.token;
+      state.user = action.payload.user;
+      state.isAuthenticated = true;
+      state.authModalVisible = false;
+    });
+    builder.addCase(setEmailPasswordThunk.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
     });
